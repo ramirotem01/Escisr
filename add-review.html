@@ -3,49 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הוספת ביקורת | EscapeRooms</title>
+    <title>דרג חדר בריחה | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        select option { background: #0f172a; color: white; }
     </style>
 </head>
 <body class="p-6 pb-24">
 
     <div class="max-w-md mx-auto">
         <header class="mb-8 text-center">
-            <h1 class="text-2xl font-bold text-blue-400 italic">דרג את החוויה ✍️</h1>
-            <p class="text-slate-500 text-xs mt-2 uppercase tracking-widest">הביקורת שלך עוזרת לאחרים לבחור</p>
+            <h1 class="text-3xl font-black text-blue-400 italic italic">דרג חדר ✍️</h1>
+            <p class="text-slate-500 text-xs mt-2 uppercase tracking-widest font-bold">החוות דעת שלך משפיעה על הדירוג הכללי</p>
         </header>
 
-        <form id="review-form" class="glass p-6 rounded-3xl shadow-2xl border-t border-white/10 space-y-5">
+        <form id="review-form" class="glass p-8 rounded-[2.5rem] shadow-2xl border-t border-white/10 space-y-6">
             
             <div>
-                <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">בחר חדר</label>
-                <select id="room-select" required class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                    <option value="" disabled selected>טוען חדרים...</option>
+                <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">בחר את החדר שביקרת בו</label>
+                <select id="room-select" required class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-white transition-all appearance-none">
+                    <option value="" disabled selected>טוען רשימת חדרים...</option>
                 </select>
             </div>
 
             <div>
-                <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">ציון כללי (1-10)</label>
-                <input type="number" id="rating" min="1" max="10" step="0.1" required class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl outline-none focus:border-yellow-500 text-yellow-500 font-bold text-center text-xl">
+                <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">ציון כללי (1-10)</label>
+                <input type="number" id="rating" min="1" max="10" step="0.1" required placeholder="לדוגמה: 9.5" 
+                    class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-yellow-500 text-yellow-500 font-black text-center text-2xl tracking-tighter">
             </div>
 
             <div>
-                <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">מה דעתך על החדר?</label>
-                <textarea id="comment" rows="3" placeholder="ספר לנו על האווירה, החידות..." class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-sm"></textarea>
+                <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">איך היה? (אופציונלי)</label>
+                <textarea id="comment" rows="3" placeholder="ספר בקצרה על החוויה..." 
+                    class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-sm text-slate-200"></textarea>
             </div>
 
-            <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95">
-                שלח ביקורת עכשיו ✨
+            <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-lg shadow-blue-900/40 transition-all active:scale-95 flex justify-center items-center gap-2">
+                פרסם דירוג עכשיו 🚀
             </button>
         </form>
     </div>
 
+    <nav class="fixed bottom-0 left-0 w-full bg-slate-900/90 backdrop-blur-md border-t border-white/5 p-3 flex justify-around items-center z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-500">
+            <span class="text-xl">🏠</span>
+            <span class="text-[10px] font-bold">ראשי</span>
+        </a>
+        <a href="add-review.html" class="flex flex-col items-center gap-1 text-blue-400">
+            <span class="text-xl">✍️</span>
+            <span class="text-[10px] font-bold">דירוג</span>
+        </a>
+    </nav>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -59,64 +73,73 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 1. טעינת רשימת החדרים לתוך ה-Select
-        async function loadRoomsToSelect() {
+        // טעינת רשימת החדרים מה-DB לתוך ה-Select
+        async function loadRooms() {
             const select = document.getElementById('room-select');
-            const querySnapshot = await getDocs(collection(db, "rooms"));
-            select.innerHTML = '<option value="" disabled selected>בחר מהרשימה...</option>';
-            querySnapshot.forEach((roomDoc) => {
-                select.innerHTML += `<option value="${roomDoc.id}">${roomDoc.data().name}</option>`;
-            });
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                select.innerHTML = '<option value="" disabled selected>בחר חדר מהרשימה...</option>';
+                querySnapshot.forEach((roomDoc) => {
+                    select.innerHTML += `<option value="${roomDoc.id}">${roomDoc.data().name}</option>`;
+                });
+            } catch (err) {
+                console.error("טעינת חדרים נכשלה:", err);
+                select.innerHTML = '<option value="" disabled>שגיאה בטעינה</option>';
+            }
         }
 
-        // 2. שליחת הביקורת ועדכון החדר
+        // שליחת הטופס ועדכון ה-Database
         document.getElementById('review-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
             const roomId = document.getElementById('room-select').value;
             const newRating = parseFloat(document.getElementById('rating').value);
-            
+            const comment = document.getElementById('comment').value;
+
+            if (!roomId) { alert("אנא בחר חדר!"); return; }
+
             btn.disabled = true;
-            btn.innerText = "מעדכן נתונים...";
+            btn.innerHTML = 'מעדכן דירוגים... <div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>';
 
             try {
-                // א. הוספת הביקורת לאוסף ה-Reviews
+                // 1. הוספת הביקורת לאוסף ה-reviews
                 await addDoc(collection(db, "reviews"), {
                     roomId: roomId,
                     rating: newRating,
-                    comment: document.getElementById('comment').value,
-                    date: new Date().toISOString()
+                    comment: comment,
+                    createdAt: new Date().toISOString()
                 });
 
-                // ב. חישוב מחדש של הציון ועדכון כמות המדרגים
+                // 2. קבלת נתוני החדר הנוכחיים לצורך חישוב ממוצע
                 const roomRef = doc(db, "rooms", roomId);
                 const roomSnap = await getDoc(roomRef);
                 const roomData = roomSnap.data();
 
-                const currentCount = roomData.reviewCount || 0;
                 const currentRating = roomData.rating || 0;
+                const currentCount = roomData.reviewCount || 0;
 
-                // נוסחת ממוצע משוקלל חדש
+                // חישוב ממוצע משוקלל חדש
                 const newTotalCount = currentCount + 1;
-                const updatedRating = ((currentRating * currentCount) + newRating) / newTotalCount;
+                const newAverage = ((currentRating * currentCount) + newRating) / newTotalCount;
 
+                // 3. עדכון החדר עצמו: העלאת המונה ועדכון הציון הממוצע
                 await updateDoc(roomRef, {
                     reviewCount: increment(1),
-                    rating: updatedRating
+                    rating: newAverage
                 });
 
-                alert("הביקורת התקבלה! תודה על השיתוף.");
+                alert("הדירוג נשלח בהצלחה! תודה.");
                 window.location.href = 'index.html';
 
             } catch (err) {
-                console.error(err);
-                alert("חלה שגיאה בשליחה. נסה שוב.");
+                console.error("שגיאה בעדכון:", err);
+                alert("חלה שגיאה בשמירה: " + err.message);
                 btn.disabled = false;
-                btn.innerText = "שלח ביקורת עכשיו ✨";
+                btn.innerText = "פרסם דירוג עכשיו 🚀";
             }
         };
 
-        loadRoomsToSelect();
+        loadRooms();
     </script>
 </body>
 </html>
