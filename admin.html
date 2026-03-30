@@ -5,51 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ניהול מערכת | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
 </head>
-<body class="bg-slate-900 text-white p-6">
+<body class="p-6 pb-24">
 
-    <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold mb-6 text-blue-400">הוספת חדר חדש למערכת</h1>
+    <div class="max-w-2xl mx-auto">
+        <header class="mb-8 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-400">ניהול חדרים 🛠️</h1>
+            <a href="index.html" class="text-xs bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700 transition">חזרה לאתר</a>
+        </header>
         
-        <form id="add-room-form" class="space-y-4 bg-slate-800 p-6 rounded-2xl border border-slate-700">
-            <div>
-                <label class="block text-xs mb-1">שם החדר</label>
-                <input type="text" id="name" required class="w-full bg-slate-700 p-3 rounded-lg outline-none">
-            </div>
-            <div>
-                <label class="block text-xs mb-1">מיקום (עיר)</label>
-                <input type="text" id="location" required class="w-full bg-slate-700 p-3 rounded-lg outline-none">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs mb-1">רמת פחד (1-10)</label>
-                    <input type="number" id="scary" min="1" max="10" value="5" class="w-full bg-slate-700 p-3 rounded-lg outline-none">
+        <section class="glass p-6 rounded-3xl mb-10 shadow-2xl border-t border-white/10">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">✨ הוספת חדר חדש</h2>
+            <form id="add-room-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">שם החדר</label>
+                    <input type="text" id="name" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500">
                 </div>
+                
                 <div>
-                    <label class="block text-xs mb-1">רמה טכנולוגית (1-10)</label>
-                    <input type="number" id="tech" min="1" max="10" value="5" class="w-full bg-slate-700 p-3 rounded-lg outline-none">
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">מיקום (עיר)</label>
+                    <input type="text" id="location" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500">
                 </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">ציון כללי (1.0 - 5.0)</label>
+                    <input type="number" id="rating" step="0.1" min="1" max="5" value="4.5" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-yellow-500 font-bold">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">רמת פחד (1-10)</label>
+                    <input type="number" id="scary" min="1" max="10" value="5" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">רמה טכנולוגית (1-10)</label>
+                    <input type="number" id="tech" min="1" max="10" value="5" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">לינק לתמונה</label>
+                    <input type="url" id="image" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none" placeholder="https://images.unsplash.com/...">
+                </div>
+
+                <div class="flex items-center gap-3 py-2">
+                    <input type="checkbox" id="kids" class="w-5 h-5 rounded bg-slate-700">
+                    <label for="kids" class="text-sm text-slate-300">מתאים לילדים?</label>
+                </div>
+                
+                <button type="submit" class="md:col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95">
+                    הוסף חדר למערכת 🚀
+                </button>
+            </form>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-slate-400">📋 רשימת חדרים קיימת</h2>
+            <div id="admin-rooms-list" class="space-y-3">
+                <div class="text-center py-10 text-slate-600 italic">טוען חדרים...</div>
             </div>
-            <div>
-                <label class="block text-xs mb-1">לינק לתמונה</label>
-                <input type="url" id="image" class="w-full bg-slate-700 p-3 rounded-lg outline-none" placeholder="https://...">
-            </div>
-            <div class="flex items-center gap-2 py-2">
-                <input type="checkbox" id="kids" class="w-5 h-5">
-                <label for="kids" class="text-sm">מתאים לילדים?</label>
-            </div>
-            
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-500 font-bold py-4 rounded-xl transition-all">
-                הוסף חדר למסד הנתונים ✅
-            </button>
-        </form>
-        
-        <a href="index.html" class="block text-center mt-6 text-slate-500 text-sm">חזרה לדף הבית</a>
+        </section>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -63,15 +86,37 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // Load and Refresh List
+        async function loadAdminRooms() {
+            const list = document.getElementById('admin-rooms-list');
+            list.innerHTML = '';
+            const querySnapshot = await getDocs(collection(db, "rooms"));
+            
+            querySnapshot.forEach((roomDoc) => {
+                const data = roomDoc.data();
+                list.innerHTML += `
+                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-blue-500">
+                        <div>
+                            <h3 class="font-bold text-blue-100">${data.name}</h3>
+                            <p class="text-[10px] text-slate-500">${data.location} | ⭐ ${data.rating}</p>
+                        </div>
+                        <button onclick="deleteRoom('${roomDoc.id}')" class="bg-red-900/30 text-red-400 p-2 rounded-lg hover:bg-red-900/50 text-xs transition">
+                            מחק חדר 🗑️
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        // Add Room Logic
         document.getElementById('add-room-form').onsubmit = async (e) => {
             e.preventDefault();
-            
             const newRoom = {
                 name: document.getElementById('name').value,
                 location: document.getElementById('location').value,
+                rating: parseFloat(document.getElementById('rating').value),
                 scaryLevel: parseInt(document.getElementById('scary').value),
                 techLevel: parseInt(document.getElementById('tech').value),
-                rating: 5.0, // ציון התחלתי
                 difficulty: 5,
                 design: 5,
                 story: 5,
@@ -83,11 +128,26 @@
                 await addDoc(collection(db, "rooms"), newRoom);
                 alert("החדר נוסף בהצלחה!");
                 e.target.reset();
-            } catch (error) {
-                console.error(error);
-                alert("שגיאה בהוספה. בדוק את ה-Console.");
+                loadAdminRooms();
+            } catch (err) {
+                console.error(err);
+                alert("שגיאה בהוספה.");
             }
         };
+
+        // Delete Room Logic
+        window.deleteRoom = async (id) => {
+            if (confirm("האם אתה בטוח שברצונך למחוק את החדר הזה? פעולה זו היא סופית!")) {
+                try {
+                    await deleteDoc(doc(db, "rooms", id));
+                    loadAdminRooms();
+                } catch (err) {
+                    alert("שגיאה במחיקה.");
+                }
+            }
+        };
+
+        loadAdminRooms();
     </script>
 </body>
 </html>
