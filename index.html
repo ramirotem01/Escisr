@@ -12,6 +12,19 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Neon Loader Custom Style */
+        .neon-loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid transparent;
+            border-top-color: #3b82f6;
+            border-bottom-color: #a855f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            filter: drop-shadow(0 0 5px #3b82f6);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="pb-24">
@@ -19,7 +32,7 @@
     <header class="p-6 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center">
         <div>
             <h1 class="text-2xl font-black text-blue-400 italic tracking-tight">EscapeRooms</h1>
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">מצא את החדר הבא</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">מצא את האתגר הבא</p>
         </div>
         <div class="flex gap-2">
             <select id="sort-select" onchange="loadRooms()" class="bg-slate-800 border border-slate-700 rounded-xl text-xs p-2.5 outline-none text-slate-300 focus:border-blue-500 transition-all">
@@ -84,10 +97,11 @@
             const container = document.getElementById('rooms-container');
             const sortVal = document.getElementById('sort-select').value;
             
+            // Neon Loader HTML
             container.innerHTML = `
-                <div class="col-span-full text-center py-20">
-                    <div class="animate-spin inline-block w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-                    <p class="text-slate-500 font-medium">מעדכן רשימת חדרים...</p>
+                <div class="col-span-full flex flex-col items-center justify-center py-24">
+                    <div class="neon-loader mb-6"></div>
+                    <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">Scanning for rooms...</p>
                 </div>`;
 
             const sortMap = {
@@ -108,14 +122,18 @@
                     const room = doc.data();
                     const roomId = doc.id;
 
-                    // סינון בקוד - מונע שגיאות אינדקסים משולבים
                     if (kidsOnly && !room.kidFriendly) return;
 
                     count++;
+                    
+                    // עיגול נתונים לתצוגה נקייה
                     const rating = room.rating ? room.rating.toFixed(1) : "0.0";
                     const reviewCount = room.reviewCount || 0;
-                    const scaryPercent = (room.scaryLevel || 0) * 10;
-                    const techPercent = (room.techLevel || 0) * 10;
+                    const scaryLevel = Math.round(room.scaryLevel || 0);
+                    const techLevel = Math.round(room.techLevel || 0);
+                    
+                    const scaryPercent = scaryLevel * 10;
+                    const techPercent = techLevel * 10;
                     const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
 
                     roomsHtml += `
@@ -136,7 +154,7 @@
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-1.5">
-                                            <span>💀 פחד</span><span class="text-slate-300">${room.scaryLevel || 0}/10</span>
+                                            <span>💀 פחד</span><span class="text-slate-300">${scaryLevel}/10</span>
                                         </div>
                                         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                             <div class="bg-red-500 h-full rounded-full transition-all duration-1000" style="width: ${scaryPercent}%"></div>
@@ -144,7 +162,7 @@
                                     </div>
                                     <div>
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-1.5">
-                                            <span>🤖 טכנו'</span><span class="text-slate-300">${room.techLevel || 0}/10</span>
+                                            <span>🤖 טכנו'</span><span class="text-slate-300">${techLevel}/10</span>
                                         </div>
                                         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                             <div class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width: ${techPercent}%"></div>
@@ -160,7 +178,7 @@
 
             } catch (error) {
                 console.error("Error loading rooms:", error);
-                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים. וודא שהגדרת אינדקסים בסיסיים ב-Firebase.</div>';
+                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים.</div>';
             }
         }
 
