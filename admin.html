@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול מערכת | EscapeRooms</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white p-6">
+
+    <div class="max-w-md mx-auto">
+        <h1 class="text-2xl font-bold mb-6 text-blue-400">הוספת חדר חדש למערכת</h1>
+        
+        <form id="add-room-form" class="space-y-4 bg-slate-800 p-6 rounded-2xl border border-slate-700">
+            <div>
+                <label class="block text-xs mb-1">שם החדר</label>
+                <input type="text" id="name" required class="w-full bg-slate-700 p-3 rounded-lg outline-none">
+            </div>
+            <div>
+                <label class="block text-xs mb-1">מיקום (עיר)</label>
+                <input type="text" id="location" required class="w-full bg-slate-700 p-3 rounded-lg outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs mb-1">רמת פחד (1-10)</label>
+                    <input type="number" id="scary" min="1" max="10" value="5" class="w-full bg-slate-700 p-3 rounded-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">רמה טכנולוגית (1-10)</label>
+                    <input type="number" id="tech" min="1" max="10" value="5" class="w-full bg-slate-700 p-3 rounded-lg outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs mb-1">לינק לתמונה</label>
+                <input type="url" id="image" class="w-full bg-slate-700 p-3 rounded-lg outline-none" placeholder="https://...">
+            </div>
+            <div class="flex items-center gap-2 py-2">
+                <input type="checkbox" id="kids" class="w-5 h-5">
+                <label for="kids" class="text-sm">מתאים לילדים?</label>
+            </div>
+            
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-500 font-bold py-4 rounded-xl transition-all">
+                הוסף חדר למסד הנתונים ✅
+            </button>
+        </form>
+        
+        <a href="index.html" class="block text-center mt-6 text-slate-500 text-sm">חזרה לדף הבית</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.getElementById('add-room-form').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const newRoom = {
+                name: document.getElementById('name').value,
+                location: document.getElementById('location').value,
+                scaryLevel: parseInt(document.getElementById('scary').value),
+                techLevel: parseInt(document.getElementById('tech').value),
+                rating: 5.0, // ציון התחלתי
+                difficulty: 5,
+                design: 5,
+                story: 5,
+                image: document.getElementById('image').value || "https://via.placeholder.com/400x200",
+                kidFriendly: document.getElementById('kids').checked
+            };
+
+            try {
+                await addDoc(collection(db, "rooms"), newRoom);
+                alert("החדר נוסף בהצלחה!");
+                e.target.reset();
+            } catch (error) {
+                console.error(error);
+                alert("שגיאה בהוספה. בדוק את ה-Console.");
+            }
+        };
+    </script>
+</body>
+</html>
