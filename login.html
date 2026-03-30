@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>התחברות | EscapeRooms</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-6">
+
+    <div class="w-full max-w-md">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-black text-blue-400 italic">EscapeRooms</h1>
+            <p class="text-slate-500 text-xs mt-2 uppercase tracking-[0.3em]">הדרכון האישי שלך מתחיל כאן</p>
+        </header>
+
+        <div class="glass p-8 rounded-[2.5rem] shadow-2xl">
+            <div class="flex mb-8 bg-slate-900/50 p-1 rounded-2xl">
+                <button id="tab-login" onclick="switchTab('login')" class="flex-1 py-3 rounded-xl font-bold text-sm transition-all bg-blue-600 text-white">התחברות</button>
+                <button id="tab-signup" onclick="switchTab('signup')" class="flex-1 py-3 rounded-xl font-bold text-sm transition-all text-slate-400">הרשמה</button>
+            </div>
+
+            <form id="auth-form" class="space-y-5">
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">אימייל</label>
+                    <input type="email" id="email" required class="w-full bg-slate-900 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-white transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">סיסמה</label>
+                    <input type="password" id="password" required class="w-full bg-slate-900 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-white transition-all">
+                </div>
+                <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-lg shadow-blue-900/40 transition-all active:scale-95 mt-4">
+                    בוא נצא לדרך 🚀
+                </button>
+            </form>
+            <p id="error-msg" class="text-red-400 text-xs mt-4 text-center hidden"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        let mode = 'login';
+
+        window.switchTab = (newMode) => {
+            mode = newMode;
+            const isLogin = mode === 'login';
+            document.getElementById('tab-login').className = isLogin ? "flex-1 py-3 rounded-xl font-bold text-sm bg-blue-600 text-white shadow-lg" : "flex-1 py-3 rounded-xl font-bold text-sm text-slate-400";
+            document.getElementById('tab-signup').className = !isLogin ? "flex-1 py-3 rounded-xl font-bold text-sm bg-blue-600 text-white shadow-lg" : "flex-1 py-3 rounded-xl font-bold text-sm text-slate-400";
+            document.getElementById('submit-btn').innerText = isLogin ? "בוא נצא לדרך 🚀" : "צור חשבון חדש ✨";
+        };
+
+        document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            
+            try {
+                if (mode === 'login') {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+                window.location.href = 'index.html';
+            } catch (error) {
+                errorMsg.innerText = "שגיאה: " + error.message;
+                errorMsg.classList.remove('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
