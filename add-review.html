@@ -9,9 +9,10 @@
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         input[type="range"] { accent-color: #3b82f6; }
+        .nav-glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(15px); border-t: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
-<body class="p-6 pb-24">
+<body class="p-6 pb-32">
 
     <div class="max-w-md mx-auto">
         <header class="mb-8 text-center">
@@ -23,7 +24,7 @@
             
             <div>
                 <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">איזה חדר עשית?</label>
-                <select id="room-select" required class="w-full bg-slate-900 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-white appearance-none">
+                <select id="room-select" required class="w-full bg-slate-900 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-white appearance-none transition-all">
                     <option value="" disabled selected>טוען רשימה...</option>
                 </select>
             </div>
@@ -31,15 +32,15 @@
             <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                 <label class="flex justify-between text-[10px] uppercase text-yellow-500 mb-3 font-bold">
                     <span>ציון כללי (1-10)</span>
-                    <span id="val-rating" class="text-sm font-black">8.0</span>
+                    <span id="val-rating" class="text-sm font-black text-yellow-400 font-mono">8.0</span>
                 </label>
-                <input type="range" id="rating" min="1" max="10" step="0.1" value="8.0" oninput="document.getElementById('val-rating').innerText = this.value" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
+                <input type="range" id="rating" min="1" max="10" step="0.1" value="8.0" oninput="document.getElementById('val-rating').innerText = parseFloat(this.value).toFixed(1)" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
             </div>
 
             <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                 <label class="flex justify-between text-[10px] uppercase text-red-500 mb-3 font-bold">
                     <span>כמה זה היה מפחיד? (1-10)</span>
-                    <span id="val-scary" class="text-sm font-black">5</span>
+                    <span id="val-scary" class="text-sm font-black text-red-400">5</span>
                 </label>
                 <input type="range" id="scary" min="1" max="10" step="1" value="5" oninput="document.getElementById('val-scary').innerText = this.value" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
             </div>
@@ -47,14 +48,14 @@
             <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                 <label class="flex justify-between text-[10px] uppercase text-purple-500 mb-3 font-bold">
                     <span>רמה טכנולוגית וחידות (1-10)</span>
-                    <span id="val-tech" class="text-sm font-black">5</span>
+                    <span id="val-tech" class="text-sm font-black text-purple-400">5</span>
                 </label>
                 <input type="range" id="tech" min="1" max="10" step="1" value="5" oninput="document.getElementById('val-tech').innerText = this.value" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
             </div>
 
             <div>
                 <label class="block text-[10px] uppercase text-slate-500 mb-2 font-bold mr-1">חוות דעת חופשית</label>
-                <textarea id="comment" rows="3" placeholder="מה הכי אהבת בחדר?" class="w-full bg-slate-900 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-sm text-slate-200"></textarea>
+                <textarea id="comment" rows="3" placeholder="מה הכי אהבת בחדר?" class="w-full bg-slate-900 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-sm text-slate-200 transition-all"></textarea>
             </div>
 
             <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-lg shadow-blue-900/40 transition-all active:scale-95">
@@ -62,6 +63,25 @@
             </button>
         </form>
     </div>
+
+    <nav class="fixed bottom-0 left-0 w-full nav-glass p-3 flex justify-around items-center z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">🏠</span>
+            <span class="text-[10px] font-bold">ראשי</span>
+        </a>
+        <a href="compare.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">⚖️</span>
+            <span class="text-[10px] font-bold">השוואה</span>
+        </a>
+        <a href="add-review.html" class="flex flex-col items-center gap-1 text-blue-400">
+            <span class="text-xl">✍️</span>
+            <span class="text-[10px] font-bold">דירוג</span>
+        </a>
+        <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">🛂</span>
+            <span class="text-[10px] font-bold">הדרכון</span>
+        </a>
+    </nav>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -81,11 +101,15 @@
 
         async function loadRooms() {
             const select = document.getElementById('room-select');
-            const querySnapshot = await getDocs(collection(db, "rooms"));
-            select.innerHTML = '<option value="" disabled selected>בחר חדר מהרשימה...</option>';
-            querySnapshot.forEach((roomDoc) => {
-                select.innerHTML += `<option value="${roomDoc.id}">${roomDoc.data().name}</option>`;
-            });
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                select.innerHTML = '<option value="" disabled selected>בחר חדר מהרשימה...</option>';
+                querySnapshot.forEach((roomDoc) => {
+                    select.innerHTML += `<option value="${roomDoc.id}">${roomDoc.data().name}</option>`;
+                });
+            } catch (err) {
+                console.error("Error loading rooms:", err);
+            }
         }
 
         document.getElementById('review-form').onsubmit = async (e) => {
@@ -98,17 +122,17 @@
             const newTech = parseInt(document.getElementById('tech').value);
 
             btn.disabled = true;
-            btn.innerText = "מעדכן דירוגים...";
+            btn.innerText = "מעדכן נתונים...";
 
             try {
-                // 1. הוספת הביקורת
+                // 1. הוספת הביקורת לאוסף reviews
                 await addDoc(collection(db, "reviews"), {
                     roomId, rating: newRating, scaryLevel: newScary, techLevel: newTech,
                     comment: document.getElementById('comment').value,
                     createdAt: new Date().toISOString()
                 });
 
-                // 2. עדכון הממוצעים בחדר
+                // 2. חישוב ממוצעים ועדכון החדר
                 const roomRef = doc(db, "rooms", roomId);
                 const roomSnap = await getDoc(roomRef);
                 const roomData = roomSnap.data();
@@ -116,22 +140,26 @@
                 const count = roomData.reviewCount || 0;
                 const nextCount = count + 1;
 
-                // נוסחת ממוצע משוקלל לכל שדה
-                const calcAvg = (current, newVal) => ((current * count) + newVal) / nextCount;
+                const calcAvg = (current, newVal) => {
+                    const curr = parseFloat(current) || 0;
+                    return ((curr * count) + newVal) / nextCount;
+                };
 
                 await updateDoc(roomRef, {
                     reviewCount: increment(1),
-                    rating: calcAvg(roomData.rating || 0, newRating),
-                    scaryLevel: calcAvg(roomData.scaryLevel || 0, newScary),
-                    techLevel: calcAvg(roomData.techLevel || 0, newTech)
+                    rating: calcAvg(roomData.rating, newRating),
+                    scaryLevel: Math.round(calcAvg(roomData.scaryLevel, newScary)), // פחד וטכנולוגיה בדרך כלל שלמים
+                    techLevel: Math.round(calcAvg(roomData.techLevel, newTech))
                 });
 
-                alert("תודה! הדירוג עודכן.");
+                alert("תודה! הדירוג שלך נקלט והשפיע על הממוצע הכללי.");
                 window.location.href = 'index.html';
 
             } catch (err) {
-                alert("שגיאה: " + err.message);
+                console.error(err);
+                alert("שגיאה בשליחה: " + err.message);
                 btn.disabled = false;
+                btn.innerText = "שלח ביקורת עכשיו 🚀";
             }
         };
 
