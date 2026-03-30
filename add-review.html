@@ -8,62 +8,64 @@
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        input[type="range"] { accent-color: #3b82f6; }
+        input[type="range"] { accent-color: #3b82f6; cursor: pointer; }
+        .star { transition: transform 0.1s; }
+        .star:active { transform: scale(1.3); }
     </style>
 </head>
 <body class="pb-24">
 
     <header class="p-6 text-center border-b border-slate-800">
-        <h1 class="text-xl font-bold text-blue-400">איך היה בחדר?</h1>
-        <p class="text-slate-400 text-xs mt-1">הביקורת שלך עוזרת לאחרים לבחור</p>
+        <h1 class="text-xl font-bold text-blue-400 italic">איך היה האתגר?</h1>
+        <p class="text-slate-500 text-[10px] uppercase tracking-widest mt-1">שתף את החוויה שלך</p>
     </header>
 
     <main class="max-w-md mx-auto px-6 mt-6">
         <form id="review-form" class="space-y-6">
             
-            <div>
-                <label class="block text-sm font-medium text-slate-400 mb-2">באיזה חדר ביקרת?</label>
-                <select id="room-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">בחר חדר מהרשימה...</option>
-                    </select>
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-400 mr-1">באיזה חדר ביקרת?</label>
+                <select id="room-select" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none shadow-inner">
+                    <option value="" disabled selected>טוען רשימת חדרים...</option>
+                </select>
             </div>
 
-            <div class="glass p-4 rounded-2xl text-center">
-                <label class="block text-sm font-medium text-slate-400 mb-3">ציון כללי</label>
-                <div class="flex justify-center gap-2 text-3xl">
-                    <button type="button" onclick="setStar(1)" class="star text-slate-600">⭐</button>
-                    <button type="button" onclick="setStar(2)" class="star text-slate-600">⭐</button>
-                    <button type="button" onclick="setStar(3)" class="star text-slate-600">⭐</button>
-                    <button type="button" onclick="setStar(4)" class="star text-slate-600">⭐</button>
-                    <button type="button" onclick="setStar(5)" class="star text-slate-600">⭐</button>
+            <div class="glass p-6 rounded-3xl text-center shadow-xl border-t border-white/5">
+                <label class="block text-xs font-bold text-slate-500 mb-4 uppercase">ציון כללי</label>
+                <div class="flex justify-center gap-3 text-4xl">
+                    <button type="button" onclick="setStar(1)" class="star text-slate-700">⭐</button>
+                    <button type="button" onclick="setStar(2)" class="star text-slate-700">⭐</button>
+                    <button type="button" onclick="setStar(3)" class="star text-slate-700">⭐</button>
+                    <button type="button" onclick="setStar(4)" class="star text-slate-700">⭐</button>
+                    <button type="button" onclick="setStar(5)" class="star text-slate-700">⭐</button>
                 </div>
-                <input type="hidden" id="rating-value" value="0">
+                <input type="hidden" id="rating-value" value="0" required>
             </div>
 
-            <div class="space-y-6 bg-slate-800/30 p-4 rounded-2xl border border-slate-800">
+            <div class="space-y-6 bg-slate-800/40 p-6 rounded-3xl border border-slate-800 shadow-inner">
                 <div>
-                    <div class="flex justify-between mb-2">
-                        <label class="text-sm font-medium">כמה הוא הפחיד? 🔥</label>
-                        <span id="scary-val" class="text-blue-400 font-bold">5</span>
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-sm font-medium text-slate-300">רמת פחד 🔥</label>
+                        <span id="scary-display" class="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-500/30">5/10</span>
                     </div>
-                    <input type="range" id="scary-slider" min="1" max="10" value="5" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="scary-slider" min="1" max="10" value="5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none">
                 </div>
 
                 <div>
-                    <div class="flex justify-between mb-2">
-                        <label class="text-sm font-medium">רמה טכנולוגית 🤖</label>
-                        <span id="tech-val" class="text-purple-400 font-bold">5</span>
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-sm font-medium text-slate-300">רמה טכנולוגית 🤖</label>
+                        <span id="tech-display" class="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-xs font-bold border border-purple-500/30">5/10</span>
                     </div>
-                    <input type="range" id="tech-slider" min="1" max="10" value="5" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="tech-slider" min="1" max="10" value="5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none">
                 </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-400 mb-2">כתוב משהו קצר (בלי ספוילרים!)</label>
-                <textarea id="comment" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="איך הייתה התפאורה? המפעיל היה נחמד?"></textarea>
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-400 mr-1">רשמים מהחדר</label>
+                <textarea id="comment" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none shadow-inner text-sm" placeholder="איך הייתה התפאורה? המפעיל היה זמין?"></textarea>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/40 transition-all">
+            <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black py-5 rounded-2xl shadow-2xl shadow-blue-900/40 transition-all active:scale-95">
                 שלח ביקורת ועדכן דרכון 🚀
             </button>
         </form>
@@ -74,19 +76,23 @@
             <span class="text-xl">🏠</span>
             <span class="text-[10px]">ראשי</span>
         </a>
+        <a href="compare.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+            <span class="text-xl">⚖️</span>
+            <span class="text-[10px]">השוואה</span>
+        </a>
         <a href="add-review.html" class="flex flex-col items-center gap-1 text-blue-400">
             <span class="text-xl">✍️</span>
             <span class="text-[10px]">דרג חדר</span>
         </a>
         <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
             <span class="text-xl">🛂</span>
-            <span class="text-[10px]">הדרכון שלי</span>
+            <span class="text-[10px]">הדרכון</span>
         </a>
     </nav>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -100,61 +106,69 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // עדכון ערכי סליידרים בזמן אמת
-        const scarySlider = document.getElementById('scary-slider');
-        const techSlider = document.getElementById('tech-slider');
-        scarySlider.oninput = () => document.getElementById('scary-val').innerText = scarySlider.value;
-        techSlider.oninput = () => document.getElementById('tech-val').innerText = techSlider.value;
+        // UI Sliders logic
+        const scaryS = document.getElementById('scary-slider');
+        const techS = document.getElementById('tech-slider');
+        scaryS.oninput = () => document.getElementById('scary-display').innerText = scaryS.value + "/10";
+        techS.oninput = () => document.getElementById('tech-display').innerText = techS.value + "/10";
 
-        // לוגיקת כוכבים
-        window.setStar = (count) => {
-            document.getElementById('rating-value').value = count;
-            const stars = document.querySelectorAll('.star');
-            stars.forEach((s, i) => {
-                s.classList.toggle('text-yellow-500', i < count);
-                s.classList.toggle('text-slate-600', i >= count);
+        // Star Rating logic
+        window.setStar = (val) => {
+            document.getElementById('rating-value').value = val;
+            document.querySelectorAll('.star').forEach((s, i) => {
+                s.style.color = i < val ? '#eab308' : '#334155';
             });
         };
 
-        // מילוי רשימת החדרים מה-DB
-        async function fillRooms() {
-            const querySnapshot = await getDocs(collection(db, "rooms"));
+        // Fetch rooms from DB to populate dropdown
+        async function loadRoomsList() {
             const select = document.getElementById('room-select');
-            querySnapshot.forEach((doc) => {
-                const opt = document.createElement('option');
-                opt.value = doc.id;
-                opt.text = doc.data().name;
-                select.add(opt);
-            });
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                select.innerHTML = '<option value="" disabled selected>בחר חדר מהרשימה...</option>';
+                querySnapshot.forEach((doc) => {
+                    const opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.text = doc.data().name;
+                    select.add(opt);
+                });
+            } catch (err) {
+                console.error("Error loading rooms:", err);
+            }
         }
 
-        // שמירת הביקורת
+        // Submit to Firestore
         document.getElementById('review-form').onsubmit = async (e) => {
             e.preventDefault();
-            const data = {
+            const btn = document.getElementById('submit-btn');
+            const rating = document.getElementById('rating-value').value;
+            
+            if (rating == 0) { alert("אנא דרג בכוכבים!"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "שולח ביקורת...";
+
+            const reviewData = {
                 roomId: document.getElementById('room-select').value,
-                rating: parseInt(document.getElementById('rating-value').value),
-                scaryLevel: parseInt(scarySlider.value),
-                techLevel: parseInt(techSlider.value),
+                rating: parseInt(rating),
+                scaryLevel: parseInt(scaryS.value),
+                techLevel: parseInt(techS.value),
                 comment: document.getElementById('comment').value,
-                timestamp: new Date()
+                timestamp: serverTimestamp() // Time for passport ordering
             };
 
-            if (!data.roomId || data.rating === 0) {
-                alert("אנא בחר חדר ודרג אותו בכוכבים");
-                return;
-            }
-
             try {
-                await addDoc(collection(db, "reviews"), data);
-                alert("הביקורת נשמרה! הדרכון שלך עודכן.");
+                await addDoc(collection(db, "reviews"), reviewData);
+                alert("הביקורת התקבלה! הדרכון שלך עודכן 🏆");
                 window.location.href = "passport.html";
-            } catch (err) {
-                console.error(err);
+            } catch (error) {
+                console.error("Error adding review:", error);
+                btn.disabled = false;
+                btn.innerText = "נסה שוב";
             }
         };
 
-        fillRooms();
+        loadRoomsList();
     </script>
 </body>
 </html>
