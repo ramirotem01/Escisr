@@ -9,30 +9,36 @@
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         .badge-locked { filter: grayscale(1); opacity: 0.2; transform: scale(0.9); }
-        .badge-unlocked { filter: none; opacity: 1; transform: scale(1); transition: all 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+        .badge-unlocked { filter: none; opacity: 1; transform: scale(1); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.5s ease forwards; }
+        .hidden { display: none; }
     </style>
 </head>
-<body class="pb-24">
+<body class="pb-32">
 
-    <header class="p-8 text-center bg-gradient-to-b from-slate-900 to-transparent">
-        <div class="relative inline-block">
+    <header class="p-8 text-center bg-gradient-to-b from-slate-900 to-transparent relative">
+        <button onclick="logout()" class="absolute top-6 left-6 text-slate-500 hover:text-red-400 transition text-xs font-bold uppercase tracking-tighter">
+            🚪 התנתק
+        </button>
+        
+        <div class="relative inline-block mt-4">
             <div class="w-24 h-24 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-full mx-auto flex items-center justify-center text-4xl border-4 border-slate-900 shadow-2xl relative z-10">
                 🕵️‍♂️
             </div>
-            <div id="user-status-tag" class="absolute -bottom-1 -right-1 bg-blue-500 text-[10px] px-2 py-1 rounded-full font-black border-2 border-slate-900 z-20 shadow-lg">PRO</div>
+            <div id="user-status-tag" class="absolute -bottom-1 -right-1 bg-blue-500 text-[10px] px-2 py-1 rounded-full font-black border-2 border-slate-900 z-20 shadow-lg">USER</div>
         </div>
-        <h1 id="user-name" class="text-2xl font-black mt-4 tracking-tight">הדרכון שלי</h1>
-        <p id="user-rank" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">טוען דרגה...</p>
+        
+        <h1 id="user-email" class="text-lg font-bold mt-4 tracking-tight text-slate-300 italic">טוען פרופיל...</h1>
+        <p id="user-rank" class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">מחשב דרגה...</p>
     </header>
 
-    <main class="max-w-md mx-auto px-6 space-y-8">
+    <main id="passport-content" class="max-w-md mx-auto px-6 space-y-8 hidden">
         
         <div class="grid grid-cols-2 gap-4">
             <div class="glass p-5 rounded-[2rem] text-center border-t-2 border-blue-500 shadow-xl">
                 <div id="count-rooms" class="text-4xl font-black text-white italic">0</div>
-                <div class="text-[9px] text-slate-500 font-bold uppercase mt-1">חדרים שבוצעו</div>
+                <div class="text-[9px] text-slate-500 font-bold uppercase mt-1">חדרים בדרכון</div>
             </div>
             <div class="glass p-5 rounded-[2rem] text-center border-t-2 border-purple-500 shadow-xl">
                 <div id="count-points" class="text-4xl font-black text-white italic">0</div>
@@ -41,15 +47,15 @@
         </div>
 
         <section>
-            <h3 class="text-[10px] font-black text-slate-500 mb-4 px-2 uppercase tracking-widest text-center">תגים והישגים</h3>
+            <h3 class="text-[10px] font-black text-slate-500 mb-4 px-2 uppercase tracking-widest text-center">הישגים שפתחת</h3>
             <div class="grid grid-cols-4 gap-3">
                 <div id="badge-starter" class="text-center badge-locked">
                     <div class="glass p-3 rounded-2xl text-2xl mb-2 shadow-inner">🐣</div>
                     <span class="text-[8px] font-bold text-slate-400 block">מתחיל</span>
                 </div>
                 <div id="badge-scary" class="text-center badge-locked">
-                    <div class="glass p-3 rounded-2xl text-2xl mb-2 shadow-inner">🔥</div>
-                    <span class="text-[8px] font-bold text-slate-400 block">שורד אימה</span>
+                    <div class="glass p-3 rounded-2xl text-2xl mb-2 shadow-inner">💀</div>
+                    <span class="text-[8px] font-bold text-slate-400 block">חובב אימה</span>
                 </div>
                 <div id="badge-tech" class="text-center badge-locked">
                     <div class="glass p-3 rounded-2xl text-2xl mb-2 shadow-inner">🤖</div>
@@ -63,15 +69,16 @@
         </section>
 
         <section>
-            <h3 class="text-[10px] font-black text-slate-500 mb-4 px-2 uppercase tracking-widest text-right">היסטוריית דירוגים</h3>
+            <h3 class="text-[10px] font-black text-slate-500 mb-4 px-2 uppercase tracking-widest text-right">היסטוריית ביקורים אישית</h3>
             <div id="activity-list" class="space-y-4">
-                <div class="text-center py-10">
-                    <div class="animate-pulse text-slate-700 text-sm italic">טוען את ההיסטוריה שלך...</div>
                 </div>
-            </div>
         </section>
-
     </main>
+
+    <div id="loader" class="text-center py-20">
+        <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+        <p class="text-slate-500 text-xs font-bold uppercase">מסנכרן נתונים אישיים...</p>
+    </div>
 
     <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-white/5 p-3 flex justify-around items-center z-50">
         <a href="index.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
@@ -94,7 +101,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -107,78 +115,94 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        async function loadPassportData() {
+        // פונקציית התנתקות
+        window.logout = () => {
+            signOut(auth).then(() => window.location.href = 'login.html');
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            document.getElementById('user-email').innerText = user.email;
+            await loadUserPassport(user.uid);
+            
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('passport-content').classList.remove('hidden');
+        });
+
+        async function loadUserPassport(uid) {
             const list = document.getElementById('activity-list');
             try {
-                // 1. שליפת כל הביקורות (ממוינות לפי תאריך יצירה)
-                const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
+                // שליפת ביקורות השייכות רק למשתמש הזה
+                const q = query(
+                    collection(db, "reviews"), 
+                    where("userId", "==", uid), 
+                    orderBy("createdAt", "desc")
+                );
                 
+                const querySnapshot = await getDocs(q);
                 const count = querySnapshot.size;
+                
+                // עדכון מספרים
                 document.getElementById('count-rooms').innerText = count;
-                document.getElementById('count-points').innerText = count * 150; // 150XP לכל חדר
+                document.getElementById('count-points').innerText = count * 150;
 
-                // 2. עדכון דרגה לפי כמות
+                // חישוב דרגה
                 let rank = "סוכן מתחיל";
                 if (count >= 3) rank = "פורץ מנעולים מוסמך";
                 if (count >= 10) rank = "אמן בריחה בינלאומי";
                 document.getElementById('user-rank').innerText = rank;
 
-                // 3. שחרור תגים
+                // שחרור תגים
                 if (count > 0) document.getElementById('badge-starter').className = "text-center badge-unlocked";
                 if (count >= 5) document.getElementById('badge-tech').className = "text-center badge-unlocked";
                 if (count >= 10) document.getElementById('badge-master').className = "text-center badge-unlocked";
 
-                // 4. בניית רשימת פעילות עם שמות חדרים אמיתיים
                 if (querySnapshot.empty) {
-                    list.innerHTML = '<div class="text-center py-10 text-slate-600 text-sm italic">טרם דירגת חדרים. הגיע הזמן להתחיל!</div>';
+                    list.innerHTML = '<div class="text-center py-10 text-slate-600 text-sm italic">טרם דירגת חדרים. בוא נתחיל לבנות את הדרכון שלך!</div>';
                     return;
                 }
 
                 list.innerHTML = '';
                 
-                // לולאה אסינכרונית כדי להביא את שם החדר לכל ביקורת
+                // טעינת הפעילות
                 for (const reviewDoc of querySnapshot.docs) {
                     const review = reviewDoc.data();
-                    let roomName = "חדר לא ידוע";
+                    let roomName = "טוען שם חדר...";
                     
-                    // שליפת שם החדר מתוך אוסף rooms לפי ה-ID ששמור בביקורת
-                    if (review.roomId) {
-                        const roomRef = doc(db, "rooms", review.roomId);
-                        const roomSnap = await getDoc(roomRef);
-                        if (roomSnap.exists()) {
-                            roomName = roomSnap.data().name;
-                        }
-                    }
+                    const roomRef = doc(db, "rooms", review.roomId);
+                    const roomSnap = await getDoc(roomRef);
+                    if (roomSnap.exists()) roomName = roomSnap.data().name;
 
                     const dateStr = review.createdAt ? new Date(review.createdAt).toLocaleDateString('he-IL') : 'לאחרונה';
-                    const ratingStars = "⭐".repeat(Math.round(review.rating || 0));
+                    const rating = review.rating ? parseFloat(review.rating).toFixed(1) : "0.0";
 
                     list.innerHTML += `
-                        <div class="glass p-5 rounded-3xl flex justify-between items-center animate-fade-in shadow-lg border-r-4 border-blue-500">
-                            <div>
+                        <div class="glass p-5 rounded-[2rem] flex justify-between items-center animate-slide-up shadow-lg border-r-4 border-blue-500">
+                            <div class="flex-grow">
                                 <h4 class="font-black text-sm text-white">${roomName}</h4>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-[9px] text-slate-500 font-bold">${dateStr}</span>
-                                    <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded italic">הושלם ✅</span>
+                                    <span class="text-[9px] text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded-full font-bold">הושלם ✅</span>
                                 </div>
                             </div>
-                            <div class="text-left">
-                                <div class="text-[10px] text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.4)]">${ratingStars}</div>
-                                <div class="text-[8px] text-slate-500 font-bold mt-1 uppercase">${review.rating ? review.rating.toFixed(1) : '0.0'} / 10</div>
+                            <div class="text-left bg-slate-900/50 p-3 rounded-2xl border border-white/5 min-w-[60px]">
+                                <div class="text-xs text-yellow-500 font-black text-center">⭐ ${rating}</div>
+                                <div class="text-[7px] text-slate-500 font-bold mt-1 uppercase text-center tracking-tighter">ציון אישי</div>
                             </div>
                         </div>
                     `;
                 }
-
-            } catch (error) {
-                console.error("Error loading passport:", error);
-                list.innerHTML = '<div class="text-center text-red-400 text-xs p-10">שגיאה בטעינת הנתונים מה-Database.</div>';
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = '<p class="text-red-400 text-xs text-center">שגיאה בסינכרון הדרכון. נסה שוב מאוחר יותר.</p>';
             }
         }
-
-        loadPassportData();
     </script>
 </body>
 </html>
