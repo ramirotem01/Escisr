@@ -32,18 +32,14 @@
     </header>
 
     <section class="p-4 bg-slate-900/50 flex gap-3 overflow-x-auto hide-scrollbar border-b border-slate-800">
-        <button onclick="setFilter('all')" class="filter-btn px-5 py-2 rounded-full bg-blue-600 text-white text-xs font-bold whitespace-nowrap transition-all shadow-lg shadow-blue-900/20">הכל</button>
-        <button onclick="setFilter('scary')" class="filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap hover:bg-red-900/20 hover:border-red-500/50 transition-all text-slate-300">💀 מפחיד</button>
-        <button onclick="setFilter('tech')" class="filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap hover:bg-purple-900/20 hover:border-purple-500/50 transition-all text-slate-300">🤖 טכנולוגי</button>
-        <button onclick="setFilter('kids')" class="filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap hover:bg-green-900/20 hover:border-green-500/50 transition-all text-slate-300">👼 לילדים</button>
+        <button id="filter-all" onclick="setFilter('all')" class="filter-btn px-5 py-2 rounded-full bg-blue-600 text-white text-xs font-bold whitespace-nowrap transition-all shadow-lg shadow-blue-900/20">הכל</button>
+        <button id="filter-scary" onclick="setFilter('scary')" class="filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap hover:bg-red-900/20 hover:border-red-500/50 transition-all text-slate-300">💀 מפחיד</button>
+        <button id="filter-tech" onclick="setFilter('tech')" class="filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap hover:bg-purple-900/20 hover:border-purple-500/50 transition-all text-slate-300">🤖 טכנולוגי</button>
+        <button id="filter-kids" onclick="setFilter('kids')" class="filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap hover:bg-green-900/20 hover:border-green-500/50 transition-all text-slate-300">👼 לילדים</button>
     </section>
 
     <main class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rooms-container">
-        <div class="col-span-full text-center py-20">
-            <div class="animate-spin inline-block w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-            <p class="text-slate-500 font-medium">סורק את החדרים הטובים ביותר...</p>
-        </div>
-    </main>
+        </main>
 
     <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-white/5 p-3 flex justify-around items-center z-50">
         <a href="index.html" class="flex flex-col items-center gap-1 text-blue-400">
@@ -66,7 +62,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -86,108 +82,97 @@
             const container = document.getElementById('rooms-container');
             const sortVal = document.getElementById('sort-select').value;
             
-            let q = collection(db, "rooms");
+            container.innerHTML = '<div class="col-span-full text-center py-20"><div class="animate-spin inline-block w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div><p class="text-slate-500 font-medium">סורק חדרים...</p></div>';
 
-            // לוגיקת סינון
-            if (currentFilter === 'kids') q = query(q, where("kidFriendly", "==", true));
-            if (currentFilter === 'scary') q = query(q, where("scaryLevel", ">=", 7));
-            if (currentFilter === 'tech') q = query(q, where("techLevel", ">=", 7));
-
-            // לוגיקת מיון
-            if (sortVal === 'rating-desc') q = query(q, orderBy("rating", "desc"));
-            if (sortVal === 'reviews-desc') q = query(q, orderBy("reviewCount", "desc")); // מיון לפי כמות מדרגים
-            if (sortVal === 'scary-desc') q = query(q, orderBy("scaryLevel", "desc"));
-            if (sortVal === 'tech-desc') q = query(q, orderBy("techLevel", "desc"));
+            // מפת שדות למיון
+            const sortMap = {
+                'rating-desc': 'rating',
+                'reviews-desc': 'reviewCount',
+                'scary-desc': 'scaryLevel',
+                'tech-desc': 'techLevel'
+            };
 
             try {
+                // אנחנו שולפים את כל החדרים ממוינים לפי הבחירה של המשתמש
+                // זה דורש רק אינדקסים בסיסיים (Single Field) שקיימים בדר"כ אוטומטית
+                const q = query(collection(db, "rooms"), orderBy(sortMap[sortVal] || "rating", "desc"));
                 const querySnapshot = await getDocs(q);
-                container.innerHTML = '';
-
-                if (querySnapshot.empty) {
-                    container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500">לא נמצאו חדרים כאן... 🤷‍♂️</div>';
-                    document.getElementById('rooms-count').innerText = "0 חדרים נמצאו";
-                    return;
-                }
+                
+                let roomsHtml = '';
+                let count = 0;
 
                 querySnapshot.forEach((doc) => {
                     const room = doc.data();
                     const roomId = doc.id;
-                    
-                    // עיבוד נתונים והגנות
+
+                    // פילטור בקוד (Client-side filtering) - מונע שגיאות אינדקסים של Firebase
+                    if (currentFilter === 'kids' && !room.kidFriendly) return;
+                    if (currentFilter === 'scary' && (room.scaryLevel || 0) < 7) return;
+                    if (currentFilter === 'tech' && (room.techLevel || 0) < 7) return;
+
+                    count++;
                     const rating = room.rating ? room.rating.toFixed(1) : "0.0";
                     const reviewCount = room.reviewCount || 0;
                     const scaryPercent = (room.scaryLevel || 0) * 10;
                     const techPercent = (room.techLevel || 0) * 10;
                     const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
 
-                    const card = `
+                    roomsHtml += `
                         <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl" onclick="window.location.href='room.html?id=${roomId}'">
                             <div class="relative h-48">
                                 <img src="${image}" class="w-full h-full object-cover shadow-inner" alt="${room.name}">
-                                
                                 <div class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 shadow-xl flex flex-col items-center min-w-[60px]">
-                                    <div class="flex items-center gap-1">
-                                        <span class="text-yellow-400 font-black text-base">⭐ ${rating}</span>
-                                    </div>
+                                    <span class="text-yellow-400 font-black text-base">⭐ ${rating}</span>
                                     <span class="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">(${reviewCount} מדרגים)</span>
                                 </div>
-
-                                ${room.kidFriendly ? `
-                                <div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase shadow-lg">
-                                    מתאים לילדים
-                                </div>` : ''}
+                                ${room.kidFriendly ? `<div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase shadow-lg">מתאים לילדים</div>` : ''}
                             </div>
-
                             <div class="p-5 flex-grow">
                                 <h3 class="text-xl font-black mb-1 text-white/90">${room.name}</h3>
                                 <div class="flex items-center gap-1 text-slate-400 text-xs mb-5">
-                                    <span>📍</span>
-                                    <span>${room.location}</span>
+                                    <span>📍</span><span>${room.location}</span>
                                 </div>
-                                
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-1.5">
-                                            <span>💀 פחד</span>
-                                            <span class="text-slate-300">${room.scaryLevel}/10</span>
+                                            <span>💀 פחד</span><span class="text-slate-300">${room.scaryLevel}/10</span>
                                         </div>
                                         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                            <div class="bg-red-500 h-full rounded-full transition-all duration-1000" style="width: ${scaryPercent}%"></div>
+                                            <div class="bg-red-500 h-full rounded-full" style="width: ${scaryPercent}%"></div>
                                         </div>
                                     </div>
                                     <div>
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-1.5">
-                                            <span>🤖 טכנו'</span>
-                                            <span class="text-slate-300">${room.techLevel}/10</span>
+                                            <span>🤖 טכנו'</span><span class="text-slate-300">${room.techLevel}/10</span>
                                         </div>
                                         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                            <div class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width: ${techPercent}%"></div>
+                                            <div class="bg-purple-500 h-full rounded-full" style="width: ${techPercent}%"></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                    container.innerHTML += card;
+                        </div>`;
                 });
 
-                document.getElementById('rooms-count').innerText = `${querySnapshot.size} חדרים נמצאו`;
+                container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500">לא נמצאו חדרים בסינון הזה... 🤷‍♂️</div>';
+                document.getElementById('rooms-count').innerText = `${count} חדרים נמצאו`;
 
             } catch (error) {
                 console.error("Error loading rooms:", error);
-                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים. וודא שהגדרת אינדקסים ב-Firebase.</div>';
+                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים.</div>';
             }
         }
 
         window.setFilter = (filter) => {
             currentFilter = filter;
+            // עדכון ויזואלי של הכפתורים
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
-                btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
+                btn.className = "filter-btn px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap transition-all text-slate-300";
             });
-            event.target.classList.replace('bg-slate-800', 'bg-blue-600');
-            event.target.classList.replace('text-slate-300', 'text-white');
-            event.target.classList.add('shadow-lg', 'shadow-blue-900/20');
+            
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            activeBtn.className = "filter-btn px-5 py-2 rounded-full bg-blue-600 text-white text-xs font-bold whitespace-nowrap transition-all shadow-lg shadow-blue-900/20";
+            
             loadRooms();
         };
 
