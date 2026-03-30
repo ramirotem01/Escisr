@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הדרכון שלי | EscapeRooms</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .badge-locked { filter: grayscale(1); opacity: 0.4; }
+    </style>
+</head>
+<body class="pb-24">
+
+    <header class="p-6 text-center">
+        <h1 class="text-2xl font-bold text-blue-400 italic underline decoration-blue-500/30">הדרכון שלי</h1>
+        <p class="text-slate-400 text-sm mt-1">ההיסטוריה שלך בעולם הבריחה</p>
+    </header>
+
+    <main class="max-w-md mx-auto px-6 space-y-6">
+        
+        <div class="glass p-6 rounded-2xl text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+            <div class="w-20 h-20 bg-slate-700 rounded-full mx-auto mb-3 flex items-center justify-center border-2 border-blue-500">
+                <span class="text-3xl">🕵️‍♂️</span>
+            </div>
+            <h2 class="text-xl font-bold">גיא בוארון</h2>
+            <p id="user-rank" class="text-blue-400 font-medium">דרגה: פורץ מנעולים מתקדם</p>
+            
+            <div class="mt-4 grid grid-cols-2 gap-4">
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <div id="rooms-count" class="text-2xl font-bold text-white">12</div>
+                    <div class="text-[10px] text-slate-400 uppercase">חדרים שבוצעו</div>
+                </div>
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <div id="points-count" class="text-2xl font-bold text-white">850</div>
+                    <div class="text-[10px] text-slate-400 uppercase">נקודות ניסיון</div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold mb-3 text-slate-300">תגים שהשגת</h3>
+            <div class="grid grid-cols-4 gap-3">
+                <div class="text-center" title="עשית 5 חדרים מפחידים">
+                    <div class="glass p-3 rounded-xl text-2xl mb-1">🔥</div>
+                    <span class="text-[10px] text-slate-400">שורד אימה</span>
+                </div>
+                <div class="text-center" title="סיימת חדר בתוך פחות מ-40 דקות">
+                    <div class="glass p-3 rounded-xl text-2xl mb-1">⚡</div>
+                    <span class="text-[10px] text-slate-400">מהיר כברק</span>
+                </div>
+                <div class="text-center" title="חדר טכנולוגי מאוד">
+                    <div class="glass p-3 rounded-xl text-2xl mb-1 badge-locked">🤖</div>
+                    <span class="text-[10px] text-slate-500">איש העתיד</span>
+                </div>
+                <div class="text-center" title="סיימת 10 חדרים">
+                    <div class="glass p-3 rounded-xl text-2xl mb-1">🏆</div>
+                    <span class="text-[10px] text-slate-400">מקצוען</span>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold mb-3 text-slate-300">החדרים האחרונים שלי</h3>
+            <div id="history-list" class="space-y-3">
+                <div class="glass p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-sm">התחנה האחרונה</h4>
+                        <p class="text-[10px] text-slate-500">תל אביב | 12/03/2026</p>
+                    </div>
+                    <div class="text-yellow-500 text-xs">⭐⭐⭐⭐⭐</div>
+                </div>
+                <div class="glass p-4 rounded-xl flex justify-between items-center opacity-60">
+                    <div>
+                        <h4 class="font-bold text-sm">משימה בלתי אפשרית</h4>
+                        <p class="text-[10px] text-slate-500">חיפה | 20/02/2026</p>
+                    </div>
+                    <div class="text-yellow-500 text-xs">⭐⭐⭐⭐</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 w-full bg-slate-900 border-t border-slate-800 p-3 flex justify-around items-center z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+            <span class="text-xl">🏠</span>
+            <span class="text-[10px]">ראשי</span>
+        </a>
+        <a href="search.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+            <span class="text-xl">🔍</span>
+            <span class="text-[10px]">חיפוש</span>
+        </a>
+        <a href="passport.html" class="flex flex-col items-center gap-1 text-blue-400">
+            <span class="text-xl">🛂</span>
+            <span class="text-[10px]">הדרכון שלי</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+            <span class="text-xl">⚙️</span>
+            <span class="text-[10px]">הגדרות</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase Config (אותן הגדרות כמו קודם)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // כאן היינו מוסיפים לוגיקה שמושכת את ביקורי המשתמש לפי ה-UID שלו
+        // לדוגמה: collection(db, "user_visits")
+        console.log("Passport Ready");
+    </script>
+</body>
+</html>
