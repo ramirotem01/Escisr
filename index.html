@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EscapeRooms | מצא את החדר הבא שלך</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; }
+        .room-card { transition: transform 0.2s; }
+        .room-card:hover { transform: translateY(-5px); }
+    </style>
+</head>
+<body>
+
+    <header class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-50">
+        <h1 class="text-2xl font-bold text-blue-400">EscapeRooms</h1>
+        <div id="user-status" class="text-sm text-slate-400">טוען נתונים...</div>
+    </header>
+
+    <section class="p-4 bg-slate-800/50 flex flex-wrap gap-3 justify-center">
+        <button onclick="filterRooms('all')" class="px-4 py-2 rounded-full bg-blue-600 text-white text-sm">הכל</button>
+        <button onclick="filterRooms('scary')" class="px-4 py-2 rounded-full bg-slate-700 hover:bg-red-600 text-sm transition">מפחיד 🔥</button>
+        <button onclick="filterRooms('tech')" class="px-4 py-2 rounded-full bg-slate-700 hover:bg-purple-600 text-sm transition">טכנולוגי 🤖</button>
+        <button onclick="filterRooms('kids')" class="px-4 py-2 rounded-full bg-slate-700 hover:bg-green-600 text-sm transition">מתאים לילדים 👼</button>
+    </section>
+
+    <main class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rooms-container">
+        <div class="col-span-full text-center py-20 text-slate-500">מחפש חדרים פנויים...</div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const roomsContainer = document.getElementById('rooms-container');
+
+        // פונקציה לשליפת חדרים
+        async function loadRooms(filter = 'all') {
+            roomsContainer.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500">טוען...</div>';
+            
+            let q = collection(db, "rooms");
+            
+            // לוגיקת סינון בסיסית (ניתן להרחיב)
+            if (filter === 'kids') q = query(q, where("kidFriendly", "==", true));
+            if (filter === 'scary') q = query(q, where("scaryLevel", ">=", 7));
+            if (filter === 'tech') q = query(q, where("techLevel", ">=", 7));
+
+            const querySnapshot = await getDocs(q);
+            roomsContainer.innerHTML = '';
+
+            querySnapshot.forEach((doc) => {
+                const room = doc.data();
+                const card = `
+                    <div class="room-card bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-lg">
+                        <img src="${room.image || 'https://via.placeholder.com/400x200'}" class="w-full h-48 object-cover opacity-80" alt="${room.name}">
+                        <div class="p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-xl font-bold">${room.name}</h3>
+                                <span class="bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded">⭐ ${room.rating}</span>
+                            </div>
+                            <p class="text-slate-400 text-sm mb-4">📍 ${room.location}</p>
+                            
+                            <div class="space-y-2">
+                                <div class="w-full bg-slate-700 rounded-full h-1.5">
+                                    <div class="bg-red-500 h-1.5 rounded-full" style="width: ${room.scaryLevel * 10}%"></div>
+                                </div>
+                                <div class="flex justify-between text-[10px] text-slate-500 uppercase tracking-wider">
+                                    <span>מדד פחד</span>
+                                    <span>${room.scaryLevel}/10</span>
+                                </div>
+                                
+                                <div class="w-full bg-slate-700 rounded-full h-1.5">
+                                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: ${room.techLevel * 10}%"></div>
+                                </div>
+                                <div class="flex justify-between text-[10px] text-slate-500 uppercase tracking-wider">
+                                    <span>טכנולוגיה</span>
+                                    <span>${room.techLevel}/10</span>
+                                </div>
+                            </div>
+
+                            <button class="w-full mt-6 bg-slate-700 hover:bg-blue-600 py-2 rounded-lg text-sm font-semibold transition">
+                                פרטים נוספים
+                            </button>
+                        </div>
+                    </div>
+                `;
+                roomsContainer.innerHTML += card;
+            });
+
+            document.getElementById('user-status').innerText = `נמצאו ${querySnapshot.size} חדרים`;
+        }
+
+        // חשיפת הפונקציה לחלון הגלובלי לצורך ה-onclick
+        window.filterRooms = loadRooms;
+
+        // טעינה ראשונית
+        loadRooms();
+
+    </script>
+</body>
+</html>
