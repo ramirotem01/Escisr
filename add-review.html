@@ -10,6 +10,7 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         input[type="range"] { accent-color: #3b82f6; }
         .nav-glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(15px); border-t: 1px solid rgba(255,255,255,0.05); }
+        .hidden { display: none; }
     </style>
 </head>
 <body class="p-6 pb-32">
@@ -17,8 +18,17 @@
     <div class="max-w-md mx-auto">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-black text-blue-400 italic">דרג חדר ✍️</h1>
-            <p class="text-slate-500 text-xs mt-2 uppercase tracking-widest font-bold">הדירוג שלך מעדכן את האתר בזמן אמת</p>
+            <p class="text-slate-500 text-[10px] mt-2 uppercase tracking-widest font-bold">הדירוג שלך נשמר בדרכון האישי</p>
         </header>
+
+        <div id="login-overlay" class="glass p-8 rounded-[2.5rem] text-center space-y-6 hidden">
+            <div class="text-5xl">🔒</div>
+            <h2 class="text-xl font-bold">עצור! צריך להתחבר</h2>
+            <p class="text-slate-400 text-sm">כדי שהדירוג יישמר בדרכון האישי שלך ויצבור לך נקודות, עליך להיות מחובר למערכת.</p>
+            <a href="login.html" class="block w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-lg transition-all">
+                מעבר להתחברות / הרשמה
+            </a>
+        </div>
 
         <form id="review-form" class="glass p-8 rounded-[2.5rem] shadow-2xl border-t border-white/10 space-y-6">
             
@@ -32,14 +42,14 @@
             <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                 <label class="flex justify-between text-[10px] uppercase text-yellow-500 mb-3 font-bold">
                     <span>ציון כללי (1-10)</span>
-                    <span id="val-rating" class="text-sm font-black text-yellow-400 font-mono">8.0</span>
+                    <span id="val-rating" class="text-sm font-black text-yellow-400">8.0</span>
                 </label>
                 <input type="range" id="rating" min="1" max="10" step="0.1" value="8.0" oninput="document.getElementById('val-rating').innerText = parseFloat(this.value).toFixed(1)" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
             </div>
 
             <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                 <label class="flex justify-between text-[10px] uppercase text-red-500 mb-3 font-bold">
-                    <span>כמה זה היה מפחיד? (1-10)</span>
+                    <span>רמת פחד (1-10)</span>
                     <span id="val-scary" class="text-sm font-black text-red-400">5</span>
                 </label>
                 <input type="range" id="scary" min="1" max="10" step="1" value="5" oninput="document.getElementById('val-scary').innerText = this.value" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
@@ -47,7 +57,7 @@
 
             <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                 <label class="flex justify-between text-[10px] uppercase text-purple-500 mb-3 font-bold">
-                    <span>רמה טכנולוגית וחידות (1-10)</span>
+                    <span>טכנולוגיה וחידות (1-10)</span>
                     <span id="val-tech" class="text-sm font-black text-purple-400">5</span>
                 </label>
                 <input type="range" id="tech" min="1" max="10" step="1" value="5" oninput="document.getElementById('val-tech').innerText = this.value" class="w-full h-2 bg-slate-700 rounded-lg cursor-pointer">
@@ -59,7 +69,7 @@
             </div>
 
             <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-lg shadow-blue-900/40 transition-all active:scale-95">
-                שלח ביקורת עכשיו 🚀
+                פרסם דירוג בדרכון 🚀
             </button>
         </form>
     </div>
@@ -81,11 +91,16 @@
             <span class="text-xl">🛂</span>
             <span class="text-[10px] font-bold">הדרכון</span>
         </a>
+        <a href="login.html" id="nav-login-btn" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">👤</span>
+            <span class="text-[10px] font-bold">חשבון</span>
+        </a>
     </nav>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -98,7 +113,24 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
+        let currentUser = null;
+
+        // בדיקת סטטוס התחברות
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('review-form').classList.remove('hidden');
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('nav-login-btn').classList.add('hidden'); // מחביא כפתור רישום אם כבר מחובר
+            } else {
+                document.getElementById('review-form').classList.add('hidden');
+                document.getElementById('login-overlay').classList.remove('hidden');
+            }
+        });
+
+        // טעינת רשימת חדרים
         async function loadRooms() {
             const select = document.getElementById('room-select');
             try {
@@ -108,58 +140,63 @@
                     select.innerHTML += `<option value="${roomDoc.id}">${roomDoc.data().name}</option>`;
                 });
             } catch (err) {
-                console.error("Error loading rooms:", err);
+                console.error(err);
             }
         }
 
+        // שליחת הדירוג
         document.getElementById('review-form').onsubmit = async (e) => {
             e.preventDefault();
+            if (!currentUser) { alert("עליך להתחבר קודם!"); return; }
+
             const btn = document.getElementById('submit-btn');
             const roomId = document.getElementById('room-select').value;
-            
-            const newRating = parseFloat(document.getElementById('rating').value);
-            const newScary = parseInt(document.getElementById('scary').value);
-            const newTech = parseInt(document.getElementById('tech').value);
+            const rating = parseFloat(document.getElementById('rating').value);
+            const scary = parseInt(document.getElementById('scary').value);
+            const tech = parseInt(document.getElementById('tech').value);
 
             btn.disabled = true;
-            btn.innerText = "מעדכן נתונים...";
+            btn.innerText = "שומר בדרכון שלך...";
 
             try {
-                // 1. הוספת הביקורת לאוסף reviews
+                // 1. שמירת ביקורת אישית (כולל ה-UID של המשתמש)
                 await addDoc(collection(db, "reviews"), {
-                    roomId, rating: newRating, scaryLevel: newScary, techLevel: newTech,
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    roomId: roomId,
+                    rating: rating,
+                    scaryLevel: scary,
+                    techLevel: tech,
                     comment: document.getElementById('comment').value,
                     createdAt: new Date().toISOString()
                 });
 
-                // 2. חישוב ממוצעים ועדכון החדר
+                // 2. עדכון הממוצעים בחדר (באוסף rooms)
                 const roomRef = doc(db, "rooms", roomId);
                 const roomSnap = await getDoc(roomRef);
                 const roomData = roomSnap.data();
-
                 const count = roomData.reviewCount || 0;
                 const nextCount = count + 1;
 
-                const calcAvg = (current, newVal) => {
-                    const curr = parseFloat(current) || 0;
-                    return ((curr * count) + newVal) / nextCount;
+                const calcAvg = (curr, newVal) => {
+                    const c = parseFloat(curr) || 0;
+                    return ((c * count) + newVal) / nextCount;
                 };
 
                 await updateDoc(roomRef, {
                     reviewCount: increment(1),
-                    rating: calcAvg(roomData.rating, newRating),
-                    scaryLevel: Math.round(calcAvg(roomData.scaryLevel, newScary)), // פחד וטכנולוגיה בדרך כלל שלמים
-                    techLevel: Math.round(calcAvg(roomData.techLevel, newTech))
+                    rating: calcAvg(roomData.rating, rating),
+                    scaryLevel: calcAvg(roomData.scaryLevel, scary),
+                    techLevel: calcAvg(roomData.techLevel, tech)
                 });
 
-                alert("תודה! הדירוג שלך נקלט והשפיע על הממוצע הכללי.");
-                window.location.href = 'index.html';
+                alert("הדירוג נשמר בדרכון שלך בהצלחה! צברת 150XP.");
+                window.location.href = 'passport.html';
 
             } catch (err) {
-                console.error(err);
-                alert("שגיאה בשליחה: " + err.message);
+                alert("שגיאה: " + err.message);
                 btn.disabled = false;
-                btn.innerText = "שלח ביקורת עכשיו 🚀";
+                btn.innerText = "פרסם דירוג בדרכון 🚀";
             }
         };
 
