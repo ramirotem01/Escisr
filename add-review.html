@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דרג חדר | EscapeRooms</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        input[type="range"] { accent-color: #3b82f6; }
+    </style>
+</head>
+<body class="pb-24">
+
+    <header class="p-6 text-center border-b border-slate-800">
+        <h1 class="text-xl font-bold text-blue-400">איך היה בחדר?</h1>
+        <p class="text-slate-400 text-xs mt-1">הביקורת שלך עוזרת לאחרים לבחור</p>
+    </header>
+
+    <main class="max-w-md mx-auto px-6 mt-6">
+        <form id="review-form" class="space-y-6">
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">באיזה חדר ביקרת?</label>
+                <select id="room-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">בחר חדר מהרשימה...</option>
+                    </select>
+            </div>
+
+            <div class="glass p-4 rounded-2xl text-center">
+                <label class="block text-sm font-medium text-slate-400 mb-3">ציון כללי</label>
+                <div class="flex justify-center gap-2 text-3xl">
+                    <button type="button" onclick="setStar(1)" class="star text-slate-600">⭐</button>
+                    <button type="button" onclick="setStar(2)" class="star text-slate-600">⭐</button>
+                    <button type="button" onclick="setStar(3)" class="star text-slate-600">⭐</button>
+                    <button type="button" onclick="setStar(4)" class="star text-slate-600">⭐</button>
+                    <button type="button" onclick="setStar(5)" class="star text-slate-600">⭐</button>
+                </div>
+                <input type="hidden" id="rating-value" value="0">
+            </div>
+
+            <div class="space-y-6 bg-slate-800/30 p-4 rounded-2xl border border-slate-800">
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm font-medium">כמה הוא הפחיד? 🔥</label>
+                        <span id="scary-val" class="text-blue-400 font-bold">5</span>
+                    </div>
+                    <input type="range" id="scary-slider" min="1" max="10" value="5" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm font-medium">רמה טכנולוגית 🤖</label>
+                        <span id="tech-val" class="text-purple-400 font-bold">5</span>
+                    </div>
+                    <input type="range" id="tech-slider" min="1" max="10" value="5" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">כתוב משהו קצר (בלי ספוילרים!)</label>
+                <textarea id="comment" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="איך הייתה התפאורה? המפעיל היה נחמד?"></textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/40 transition-all">
+                שלח ביקורת ועדכן דרכון 🚀
+            </button>
+        </form>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 w-full bg-slate-900 border-t border-slate-800 p-3 flex justify-around items-center z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+            <span class="text-xl">🏠</span>
+            <span class="text-[10px]">ראשי</span>
+        </a>
+        <a href="add-review.html" class="flex flex-col items-center gap-1 text-blue-400">
+            <span class="text-xl">✍️</span>
+            <span class="text-[10px]">דרג חדר</span>
+        </a>
+        <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+            <span class="text-xl">🛂</span>
+            <span class="text-[10px]">הדרכון שלי</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // עדכון ערכי סליידרים בזמן אמת
+        const scarySlider = document.getElementById('scary-slider');
+        const techSlider = document.getElementById('tech-slider');
+        scarySlider.oninput = () => document.getElementById('scary-val').innerText = scarySlider.value;
+        techSlider.oninput = () => document.getElementById('tech-val').innerText = techSlider.value;
+
+        // לוגיקת כוכבים
+        window.setStar = (count) => {
+            document.getElementById('rating-value').value = count;
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((s, i) => {
+                s.classList.toggle('text-yellow-500', i < count);
+                s.classList.toggle('text-slate-600', i >= count);
+            });
+        };
+
+        // מילוי רשימת החדרים מה-DB
+        async function fillRooms() {
+            const querySnapshot = await getDocs(collection(db, "rooms"));
+            const select = document.getElementById('room-select');
+            querySnapshot.forEach((doc) => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.text = doc.data().name;
+                select.add(opt);
+            });
+        }
+
+        // שמירת הביקורת
+        document.getElementById('review-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                roomId: document.getElementById('room-select').value,
+                rating: parseInt(document.getElementById('rating-value').value),
+                scaryLevel: parseInt(scarySlider.value),
+                techLevel: parseInt(techSlider.value),
+                comment: document.getElementById('comment').value,
+                timestamp: new Date()
+            };
+
+            if (!data.roomId || data.rating === 0) {
+                alert("אנא בחר חדר ודרג אותו בכוכבים");
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "reviews"), data);
+                alert("הביקורת נשמרה! הדרכון שלך עודכן.");
+                window.location.href = "passport.html";
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fillRooms();
+    </script>
+</body>
+</html>
