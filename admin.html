@@ -8,6 +8,7 @@
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="gray"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: left 0.7rem top 50%; }
     </style>
 </head>
 <body class="p-6 pb-24">
@@ -21,34 +22,54 @@
         <section class="glass p-6 rounded-3xl mb-10 shadow-2xl border-t border-white/10">
             <h2 class="text-lg font-bold mb-4 flex items-center gap-2">✨ הוספת חדר חדש</h2>
             <form id="add-room-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
                 <div class="md:col-span-2">
                     <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">שם החדר</label>
-                    <input type="text" id="name" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <input type="text" id="name" required placeholder="לדוגמה: הקללה של הפרעון" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500">
                 </div>
                 
                 <div>
-                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">מיקום (עיר)</label>
-                    <input type="text" id="location" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">עיר</label>
+                    <select id="location" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
+                        <option value="" disabled selected>בחר עיר...</option>
+                        <option value="תל אביב">תל אביב</option>
+                        <option value="ירושלים">ירושלים</option>
+                        <option value="חיפה">חיפה</option>
+                        <option value="ראשון לציון">ראשון לציון</option>
+                        <option value="פתח תקווה">פתח תקווה</option>
+                        <option value="אשדוד">אשדוד</option>
+                        <option value="נתניה">נתניה</option>
+                        <option value="באר שבע">באר שבע</option>
+                        <option value="רמת גן">רמת גן</option>
+                        <option value="חולון">חולון</option>
+                        <option value="הרצליה">הרצליה</option>
+                        <option value="אילת">אילת</option>
+                    </select>
                 </div>
 
                 <div>
                     <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">ציון כללי (1.0 - 5.0)</label>
-                    <input type="number" id="rating" step="0.1" min="1" max="5" value="4.5" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-yellow-500 font-bold">
+                    <input type="number" id="rating" step="0.1" min="1" max="5" required placeholder="לדוגמה: 4.8" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-yellow-500 font-bold">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">תיאור קצר</label>
+                    <textarea id="description" required rows="2" placeholder="תקציר העלילה או חוויית החדר..." class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-sm"></textarea>
                 </div>
 
                 <div>
                     <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">רמת פחד (1-10)</label>
-                    <input type="number" id="scary" min="1" max="10" value="5" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none">
+                    <input type="number" id="scary" min="1" max="10" required placeholder="דירוג אימה" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none">
                 </div>
                 
                 <div>
                     <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">רמה טכנולוגית (1-10)</label>
-                    <input type="number" id="tech" min="1" max="10" value="5" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none">
+                    <input type="number" id="tech" min="1" max="10" required placeholder="דירוג טכנולוגיה" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none">
                 </div>
 
                 <div class="md:col-span-2">
                     <label class="block text-[10px] uppercase text-slate-500 mb-1 mr-1">לינק לתמונה</label>
-                    <input type="url" id="image" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none" placeholder="https://images.unsplash.com/...">
+                    <input type="url" id="image" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none" placeholder="הדבק כאן לינק לתמונה (URL)">
                 </div>
 
                 <div class="flex items-center gap-3 py-2">
@@ -56,7 +77,7 @@
                     <label for="kids" class="text-sm text-slate-300">מתאים לילדים?</label>
                 </div>
                 
-                <button type="submit" class="md:col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95">
+                <button type="submit" class="md:col-span-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95">
                     הוסף חדר למערכת 🚀
                 </button>
             </form>
@@ -86,41 +107,45 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Load and Refresh List
         async function loadAdminRooms() {
             const list = document.getElementById('admin-rooms-list');
             list.innerHTML = '';
-            const querySnapshot = await getDocs(collection(db, "rooms"));
-            
-            querySnapshot.forEach((roomDoc) => {
-                const data = roomDoc.data();
-                list.innerHTML += `
-                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-blue-500">
-                        <div>
-                            <h3 class="font-bold text-blue-100">${data.name}</h3>
-                            <p class="text-[10px] text-slate-500">${data.location} | ⭐ ${data.rating}</p>
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                if (querySnapshot.empty) {
+                    list.innerHTML = '<div class="text-center py-10 text-slate-600 italic">אין חדרים במערכת</div>';
+                    return;
+                }
+                querySnapshot.forEach((roomDoc) => {
+                    const data = roomDoc.data();
+                    list.innerHTML += `
+                        <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-blue-500 animate-fade-in">
+                            <div>
+                                <h3 class="font-bold text-blue-100">${data.name}</h3>
+                                <p class="text-[10px] text-slate-500">${data.location} | ⭐ ${data.rating}</p>
+                            </div>
+                            <button onclick="deleteRoom('${roomDoc.id}')" class="bg-red-900/30 text-red-400 p-2 rounded-lg hover:bg-red-900/50 text-xs transition">
+                                מחק 🗑️
+                            </button>
                         </div>
-                        <button onclick="deleteRoom('${roomDoc.id}')" class="bg-red-900/30 text-red-400 p-2 rounded-lg hover:bg-red-900/50 text-xs transition">
-                            מחק חדר 🗑️
-                        </button>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            } catch (err) { console.error(err); }
         }
 
-        // Add Room Logic
         document.getElementById('add-room-form').onsubmit = async (e) => {
             e.preventDefault();
             const newRoom = {
                 name: document.getElementById('name').value,
                 location: document.getElementById('location').value,
                 rating: parseFloat(document.getElementById('rating').value),
+                description: document.getElementById('description').value,
                 scaryLevel: parseInt(document.getElementById('scary').value),
                 techLevel: parseInt(document.getElementById('tech').value),
-                difficulty: 5,
+                difficulty: 5, 
                 design: 5,
                 story: 5,
-                image: document.getElementById('image').value || "https://via.placeholder.com/400x200",
+                image: document.getElementById('image').value,
                 kidFriendly: document.getElementById('kids').checked
             };
 
@@ -135,15 +160,12 @@
             }
         };
 
-        // Delete Room Logic
         window.deleteRoom = async (id) => {
-            if (confirm("האם אתה בטוח שברצונך למחוק את החדר הזה? פעולה זו היא סופית!")) {
+            if (confirm("בטוח שברצונך למחוק?")) {
                 try {
                     await deleteDoc(doc(db, "rooms", id));
                     loadAdminRooms();
-                } catch (err) {
-                    alert("שגיאה במחיקה.");
-                }
+                } catch (err) { alert("שגיאה במחיקה."); }
             }
         };
 
