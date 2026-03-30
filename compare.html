@@ -10,51 +10,53 @@
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: left 0.7rem top 50%; }
+        .compare-card { transition: all 0.3s ease; }
     </style>
 </head>
 <body class="pb-24">
 
     <header class="p-6 text-center border-b border-slate-800 bg-slate-900 sticky top-0 z-50">
-        <h1 class="text-xl font-bold text-blue-400">השוואה ראש בראש ⚔️</h1>
+        <h1 class="text-xl font-bold text-blue-400 italic">השוואה ראש בראש ⚔️</h1>
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-6">
         
         <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="space-y-2">
-                <label class="text-[10px] uppercase text-slate-500 mr-2">חדר א'</label>
-                <select id="select-1" onchange="compare()" class="w-full bg-blue-900/30 border border-blue-500/50 rounded-xl p-3 text-sm outline-none">
+                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold">חדר א' (כחול)</label>
+                <select id="select-1" onchange="runComparison()" class="w-full bg-blue-900/20 border border-blue-500/30 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">בחר חדר...</option>
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="text-[10px] uppercase text-slate-500 mr-2">חדר ב'</label>
-                <select id="select-2" onchange="compare()" class="w-full bg-purple-900/30 border border-purple-500/50 rounded-xl p-3 text-sm outline-none">
+                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold">חדר ב' (סגול)</label>
+                <select id="select-2" onchange="runComparison()" class="w-full bg-purple-900/20 border border-purple-500/30 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-purple-500">
                     <option value="">בחר חדר...</option>
                 </select>
             </div>
         </div>
 
-        <div id="chart-container" class="glass p-4 rounded-3xl mb-8 hidden">
-            <div class="h-72 w-full">
+        <div id="chart-section" class="glass p-6 rounded-3xl mb-8 hidden animate-fade-in">
+            <h3 class="text-center text-xs text-slate-400 uppercase mb-4">ניתוח עוצמות</h3>
+            <div class="h-80 w-full">
                 <canvas id="compareChart"></canvas>
             </div>
         </div>
 
-        <div id="table-container" class="glass rounded-2xl overflow-hidden hidden">
-            <table class="w-full text-right text-sm">
-                <thead class="bg-slate-800/50">
-                    <tr>
-                        <th class="p-4 text-slate-400 font-medium">פרמטר</th>
+        <div id="table-section" class="glass rounded-3xl overflow-hidden hidden">
+            <table class="w-full text-right">
+                <thead class="bg-slate-800/80">
+                    <tr class="text-xs text-slate-400 uppercase">
+                        <th class="p-4 font-medium">פרמטר</th>
                         <th id="name-1" class="p-4 text-blue-400 font-bold">-</th>
                         <th id="name-2" class="p-4 text-purple-400 font-bold">-</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800">
+                <tbody class="divide-y divide-slate-800 text-sm">
                     <tr>
-                        <td class="p-4 text-slate-400">ציון קהל</td>
-                        <td id="rating-1" class="p-4 font-bold"></td>
-                        <td id="rating-2" class="p-4 font-bold"></td>
+                        <td class="p-4 text-slate-400">דירוג קהל</td>
+                        <td id="rate-1" class="p-4 font-bold"></td>
+                        <td id="rate-2" class="p-4 font-bold"></td>
                     </tr>
                     <tr>
                         <td class="p-4 text-slate-400">מיקום</td>
@@ -62,17 +64,17 @@
                         <td id="loc-2" class="p-4"></td>
                     </tr>
                     <tr>
-                        <td class="p-4 text-slate-400">מתאים לילדים</td>
-                        <td id="kids-1" class="p-4"></td>
-                        <td id="kids-2" class="p-4"></td>
+                        <td class="p-4 text-slate-400">לילדים?</td>
+                        <td id="kids-1" class="p-4 text-lg"></td>
+                        <td id="kids-2" class="p-4 text-lg"></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div id="placeholder" class="text-center py-20 text-slate-600">
-            <span class="text-4xl block mb-4">⚖️</span>
-            בחר שני חדרים כדי להתחיל בהשוואה
+        <div id="placeholder" class="text-center py-32 text-slate-600">
+            <div class="text-6xl mb-6 opacity-20">⚖️</div>
+            <p>בחר שני חדרים מהרשימה כדי לראות מי מהם מתאים לכם יותר</p>
         </div>
 
     </main>
@@ -88,11 +90,11 @@
         </a>
         <a href="add-review.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
             <span class="text-xl">✍️</span>
-            <span class="text-[10px]">דרג</span>
+            <span class="text-[10px]">דרג חדר</span>
         </a>
         <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
             <span class="text-xl">🛂</span>
-            <span class="text-[10px]">דרכון</span>
+            <span class="text-[10px]">הדרכון</span>
         </a>
     </nav>
 
@@ -111,45 +113,52 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        let allRooms = [];
-        let chartInstance = null;
 
-        async function init() {
-            const querySnapshot = await getDocs(collection(db, "rooms"));
-            const s1 = document.getElementById('select-1');
-            const s2 = document.getElementById('select-2');
+        let roomsData = [];
+        let myChart = null;
+
+        // Fetch all rooms once for fast switching
+        async function initComparison() {
+            const select1 = document.getElementById('select-1');
+            const select2 = document.getElementById('select-2');
             
-            querySnapshot.forEach((doc) => {
-                const room = { id: doc.id, ...doc.data() };
-                allRooms.push(room);
-                const opt = `<option value="${room.id}">${room.name}</option>`;
-                s1.innerHTML += opt;
-                s2.innerHTML += opt;
-            });
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                querySnapshot.forEach((doc) => {
+                    const room = { id: doc.id, ...doc.data() };
+                    roomsData.push(room);
+                    const option = `<option value="${room.id}">${room.name}</option>`;
+                    select1.innerHTML += option;
+                    select2.innerHTML += option;
+                });
+            } catch (err) {
+                console.error("Error loading rooms for comparison:", err);
+            }
         }
 
-        window.compare = () => {
+        window.runComparison = () => {
             const id1 = document.getElementById('select-1').value;
             const id2 = document.getElementById('select-2').value;
             
             if (!id1 || !id2) return;
 
-            const room1 = allRooms.find(r => r.id === id1);
-            const room2 = allRooms.find(r => r.id === id2);
+            const r1 = roomsData.find(r => r.id === id1);
+            const r2 = roomsData.find(r => r.id === id2);
 
-            document.getElementById('chart-container').classList.remove('hidden');
-            document.getElementById('table-container').classList.remove('hidden');
+            // Toggle UI
+            document.getElementById('chart-section').classList.remove('hidden');
+            document.getElementById('table-section').classList.remove('hidden');
             document.getElementById('placeholder').classList.add('hidden');
 
-            updateTable(room1, room2);
-            updateChart(room1, room2);
+            updateTable(r1, r2);
+            updateChart(r1, r2);
         };
 
         function updateTable(r1, r2) {
             document.getElementById('name-1').innerText = r1.name;
             document.getElementById('name-2').innerText = r2.name;
-            document.getElementById('rating-1').innerText = `⭐ ${r1.rating}`;
-            document.getElementById('rating-2').innerText = `⭐ ${r2.rating}`;
+            document.getElementById('rate-1').innerText = `⭐ ${r1.rating.toFixed(1)}`;
+            document.getElementById('rate-2').innerText = `⭐ ${r2.rating.toFixed(1)}`;
             document.getElementById('loc-1').innerText = r1.location;
             document.getElementById('loc-2').innerText = r2.location;
             document.getElementById('kids-1').innerText = r1.kidFriendly ? '✅' : '❌';
@@ -158,9 +167,9 @@
 
         function updateChart(r1, r2) {
             const ctx = document.getElementById('compareChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
+            if (myChart) myChart.destroy();
 
-            chartInstance = new Chart(ctx, {
+            myChart = new Chart(ctx, {
                 type: 'radar',
                 data: {
                     labels: ['פחד', 'טכנולוגיה', 'קושי', 'תפאורה', 'סיפור'],
@@ -170,29 +179,35 @@
                             data: [r1.scaryLevel, r1.techLevel, r1.difficulty || 5, r1.design || 5, r1.story || 5],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            pointBackgroundColor: '#3b82f6',
                         },
                         {
                             label: r2.name,
                             data: [r2.scaryLevel, r2.techLevel, r2.difficulty || 5, r2.design || 5, r2.story || 5],
                             borderColor: '#a855f7',
                             backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                            pointBackgroundColor: '#a855f7',
                         }
                     ]
                 },
                 options: {
                     scales: {
                         r: {
+                            angleLines: { color: 'rgba(255,255,255,0.05)' },
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            pointLabels: { color: '#94a3b8', font: { size: 11 } },
                             ticks: { display: false, max: 10, min: 0 },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            pointLabels: { color: '#94a3b8' }
+                            suggestedMin: 0, suggestedMax: 10
                         }
                     },
-                    plugins: { legend: { labels: { color: '#fff' } } }
+                    plugins: {
+                        legend: { labels: { color: '#fff', font: { size: 12 } } }
+                    }
                 }
             });
         }
 
-        init();
+        initComparison();
     </script>
 </body>
 </html>
