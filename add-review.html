@@ -18,13 +18,13 @@
     <div class="max-w-md mx-auto">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-black text-blue-400 italic">דרג חדר ✍️</h1>
-            <p class="text-slate-500 text-[10px] mt-2 uppercase tracking-widest font-bold">הדירוג שלך נשמר בדרכון האישי</p>
+            <p class="text-slate-500 text-[10px] mt-2 uppercase tracking-widest font-bold">הדירוג שלך נשמר בפרופיל האישי</p>
         </header>
 
         <div id="login-overlay" class="glass p-8 rounded-[2.5rem] text-center space-y-6 hidden">
             <div class="text-5xl">🔒</div>
             <h2 class="text-xl font-bold">עצור! צריך להתחבר</h2>
-            <p class="text-slate-400 text-sm">כדי שהדירוג יישמר בדרכון האישי שלך ויצבור לך נקודות, עליך להיות מחובר למערכת.</p>
+            <p class="text-slate-400 text-sm">כדי שהדירוג יישמר בפרופיל האישי שלך ויצבור לך נקודות, עליך להיות מחובר למערכת.</p>
             <a href="login.html" class="block w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-lg transition-all">
                 מעבר להתחברות / הרשמה
             </a>
@@ -69,7 +69,7 @@
             </div>
 
             <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl shadow-lg shadow-blue-900/40 transition-all active:scale-95">
-                פרסם דירוג בדרכון 🚀
+                פרסם דירוג בפרופיל 🚀
             </button>
         </form>
     </div>
@@ -89,7 +89,7 @@
         </a>
         <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
             <span class="text-xl">🛂</span>
-            <span class="text-[10px] font-bold">הדרכון</span>
+            <span class="text-[10px] font-bold">הפרופיל</span>
         </a>
         <a href="login.html" id="nav-login-btn" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
             <span class="text-xl">👤</span>
@@ -156,7 +156,7 @@
             const tech = parseInt(document.getElementById('tech').value);
 
             btn.disabled = true;
-            btn.innerText = "שומר בדרכון שלך...";
+            btn.innerText = "שומר בפרופיל שלך...";
 
             try {
                 // 1. שמירת ביקורת אישית (כולל ה-UID של המשתמש)
@@ -190,13 +190,13 @@
                     techLevel: calcAvg(roomData.techLevel, tech)
                 });
 
-                alert("הדירוג נשמר בדרכון שלך בהצלחה! צברת 150XP.");
+                alert("הדירוג נשמר בפרופיל שלך בהצלחה! צברת 150XP.");
                 window.location.href = 'passport.html';
 
             } catch (err) {
                 alert("שגיאה: " + err.message);
                 btn.disabled = false;
-                btn.innerText = "פרסם דירוג בדרכון 🚀";
+                btn.innerText = "פרסם דירוג בפרופיל 🚀";
             }
         };
 
