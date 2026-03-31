@@ -18,12 +18,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .room-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.05); }
+        .room-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.05); position: relative; }
         .room-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.3); }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        .room-closed { border-color: #ef4444 !important; }
+        .room-closed img { filter: grayscale(1) brightness(0.5); }
+        .closed-overlay { background: rgba(239, 68, 68, 0.15); pointer-events: none; }
+
         .neon-loader {
             width: 50px;
             height: 50px;
@@ -37,7 +39,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="pb-24">
+<body class="pb-24 text-right">
 
     <header class="p-6 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center">
         <div>
@@ -54,13 +56,21 @@
         </div>
     </header>
 
-    <section class="p-4 bg-slate-900/50 flex items-center justify-between border-b border-slate-800 sticky top-[89px] z-40 backdrop-blur-sm">
+    <section class="p-4 bg-slate-900/50 flex items-center gap-3 border-b border-slate-800 sticky top-[89px] z-40 backdrop-blur-sm overflow-x-auto hide-scrollbar">
         <button id="filter-kids" onclick="toggleKidsFilter()" 
-            class="px-5 py-2 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2">
+            class="px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2">
             <span>👼</span>
             <span>מתאים לילדים</span>
         </button>
-        <p id="rooms-count" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">טוען...</p>
+
+        <button id="filter-active" onclick="toggleActiveFilter()" 
+            class="px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2">
+            <span>🔓</span>
+            <span>פעילים בלבד</span>
+        </button>
+
+        <div class="flex-grow"></div>
+        <p id="rooms-count" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold whitespace-nowrap">טוען...</p>
     </section>
 
     <main class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rooms-container">
@@ -102,6 +112,7 @@
         const db = getFirestore(app);
         
         let kidsOnly = false;
+        let activeOnly = false;
 
         async function loadRooms() {
             const container = document.getElementById('rooms-container');
@@ -131,29 +142,36 @@
                     const room = doc.data();
                     const roomId = doc.id;
 
+                    // פילטרים
                     if (kidsOnly && !room.kidFriendly) return;
+                    if (activeOnly && room.isClosed) return;
 
                     count++;
                     const rating = room.rating ? room.rating.toFixed(1) : "0.0";
-                    const reviewCount = room.reviewCount || 0;
-                    const scaryLevel = Math.round(room.scaryLevel || 0);
-                    const techLevel = Math.round(room.techLevel || 0);
-                    
-                    const scaryPercent = scaryLevel * 10;
-                    const techPercent = techLevel * 10;
+                    const scaryPercent = (room.scaryLevel || 0) * 10;
+                    const techPercent = (room.techLevel || 0) * 10;
                     const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
 
                     roomsHtml += `
-                        <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl" onclick="window.location.href='room.html?id=${roomId}'">
-                            <div class="relative h-48">
+                        <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl ${room.isClosed ? 'room-closed' : ''}" onclick="window.location.href='room.html?id=${roomId}'">
+                            <div class="relative h-48 overflow-hidden">
                                 <img src="${image}" class="w-full h-full object-cover shadow-inner" alt="${room.name}">
+                                
+                                ${room.isClosed ? `
+                                    <div class="absolute inset-0 closed-overlay flex items-center justify-center">
+                                        <span class="bg-red-600 text-white text-xs font-black px-4 py-2 rounded-full shadow-2xl border border-red-400 uppercase tracking-tighter">סגור זמנית 🔒</span>
+                                    </div>
+                                ` : ''}
+
                                 <div class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 shadow-xl flex flex-col items-center min-w-[60px]">
                                     <span class="text-yellow-400 font-black text-base">⭐ ${rating}</span>
-                                    <span class="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">(${reviewCount} מדרגים)</span>
+                                    <span class="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">(${room.reviewCount || 0} מדרגים)</span>
                                 </div>
-                                ${room.kidFriendly ? `<div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase shadow-lg border border-green-400/50">מתאים לילדים</div>` : ''}
+                                
+                                ${room.kidFriendly && !room.isClosed ? `<div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase shadow-lg border border-green-400/50">מתאים לילדים</div>` : ''}
                             </div>
-                            <div class="p-5 flex-grow">
+
+                            <div class="p-5 flex-grow ${room.isClosed ? 'opacity-60' : ''}">
                                 <h3 class="text-xl font-black mb-1 text-white/90">${room.name}</h3>
                                 <div class="flex items-center gap-1 text-slate-400 text-xs mb-5">
                                     <span>📍</span><span>${room.location}</span>
@@ -161,7 +179,7 @@
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-1.5">
-                                            <span>💀 פחד</span><span class="text-slate-300">${scaryLevel}/10</span>
+                                            <span>💀 פחד</span><span class="text-slate-300">${room.scaryLevel || 0}/10</span>
                                         </div>
                                         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                             <div class="bg-red-500 h-full rounded-full transition-all duration-1000" style="width: ${scaryPercent}%"></div>
@@ -169,7 +187,7 @@
                                     </div>
                                     <div>
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-1.5">
-                                            <span>🤖 טכנו'</span><span class="text-slate-300">${techLevel}/10</span>
+                                            <span>🤖 טכנו'</span><span class="text-slate-300">${room.techLevel || 0}/10</span>
                                         </div>
                                         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                             <div class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width: ${techPercent}%"></div>
@@ -180,7 +198,7 @@
                         </div>`;
                 });
 
-                container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
+                container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
                 document.getElementById('rooms-count').innerText = `${count} חדרים נמצאו`;
 
             } catch (error) {
@@ -191,20 +209,30 @@
 
         window.toggleKidsFilter = () => {
             kidsOnly = !kidsOnly;
-            const btn = document.getElementById('filter-kids');
-            if (kidsOnly) {
-                btn.classList.replace('bg-slate-800', 'bg-green-600');
-                btn.classList.replace('border-slate-700', 'border-green-500');
-                btn.classList.replace('text-slate-300', 'text-white');
-                btn.classList.add('shadow-lg', 'shadow-green-900/40');
-            } else {
-                btn.classList.replace('bg-green-600', 'bg-slate-800');
-                btn.classList.replace('border-green-500', 'border-slate-700');
-                btn.classList.replace('text-white', 'text-slate-300');
-                btn.classList.remove('shadow-lg', 'shadow-green-900/40');
-            }
+            updateBtnStyle('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
             loadRooms();
         };
+
+        window.toggleActiveFilter = () => {
+            activeOnly = !activeOnly;
+            updateBtnStyle('filter-active', activeOnly, 'bg-blue-600', 'border-blue-500');
+            loadRooms();
+        };
+
+        function updateBtnStyle(id, active, activeBg, activeBorder) {
+            const btn = document.getElementById(id);
+            if (active) {
+                btn.classList.replace('bg-slate-800', activeBg);
+                btn.classList.replace('border-slate-700', activeBorder);
+                btn.classList.replace('text-slate-300', 'text-white');
+                btn.classList.add('shadow-lg', 'shadow-white/5');
+            } else {
+                btn.classList.replace(activeBg, 'bg-slate-800');
+                btn.classList.replace(activeBorder, 'border-slate-700');
+                btn.classList.replace('text-white', 'text-slate-300');
+                btn.classList.remove('shadow-lg', 'shadow-white/5');
+            }
+        }
 
         window.loadRooms = loadRooms;
         loadRooms();
