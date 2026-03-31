@@ -10,6 +10,7 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="gray"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: left 0.7rem top 50%; }
         .edit-mode { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+        .closed-room { border-right-color: #ef4444 !important; opacity: 0.8; }
     </style>
 </head>
 <body class="p-6 pb-24 text-right">
@@ -67,9 +68,15 @@
                     <input type="url" id="image" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white" placeholder="https://...">
                 </div>
 
-                <div class="flex items-center gap-3 py-2">
-                    <input type="checkbox" id="kids" class="w-5 h-5 rounded bg-slate-700">
-                    <label for="kids" class="text-sm text-slate-300">מתאים לילדים?</label>
+                <div class="flex items-center gap-6 py-2 md:col-span-2">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="kids" class="w-5 h-5 rounded bg-slate-700 border-none cursor-pointer">
+                        <label for="kids" class="text-sm text-slate-300 cursor-pointer">מתאים לילדים?</label>
+                    </div>
+                    <div class="flex items-center gap-2 border-r border-slate-700 pr-6">
+                        <input type="checkbox" id="isClosed" class="w-5 h-5 rounded bg-red-900/20 border-red-500 text-red-500 cursor-pointer focus:ring-red-500">
+                        <label for="isClosed" class="text-sm text-red-400 font-bold cursor-pointer">החדר סגור? 🔒</label>
+                    </div>
                 </div>
                 
                 <div class="md:col-span-2 flex gap-2 mt-4">
@@ -105,7 +112,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         let roomsCache = [];
-        const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=800"; // תמונת ברירת מחדל יפה
+        const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=800";
 
         async function loadAdminRooms() {
             const list = document.getElementById('admin-rooms-list');
@@ -117,13 +124,18 @@
             querySnapshot.forEach((roomDoc) => {
                 const data = roomDoc.data();
                 roomsCache.push({ id: roomDoc.id, ...data });
+                
+                const closedClass = data.isClosed ? 'closed-room' : 'border-blue-500';
+                
                 list.innerHTML += `
-                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-r-4 border-blue-500 animate-fade-in">
+                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-r-4 ${closedClass} animate-fade-in relative overflow-hidden">
                         <div>
-                            <h3 class="font-bold text-blue-100">${data.name}</h3>
+                            <h3 class="font-bold ${data.isClosed ? 'text-red-400' : 'text-blue-100'}">
+                                ${data.name} ${data.isClosed ? '<span class="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded mr-2 uppercase">סגור</span>' : ''}
+                            </h3>
                             <p class="text-[10px] text-slate-500">${data.location} | ⭐ ${data.rating}/10</p>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 relative z-10">
                             <button onclick="startEdit('${roomDoc.id}')" class="bg-blue-900/30 text-blue-400 p-2 rounded-lg hover:bg-blue-900/50 text-xs transition">ערוך</button>
                             <button onclick="deleteRoom('${roomDoc.id}')" class="bg-red-900/30 text-red-400 p-2 rounded-lg hover:bg-red-900/50 text-xs transition">מחק</button>
                         </div>
@@ -145,6 +157,7 @@
             document.getElementById('tech').value = room.techLevel;
             document.getElementById('image').value = (room.image === DEFAULT_IMAGE) ? "" : room.image;
             document.getElementById('kids').checked = room.kidFriendly;
+            document.getElementById('isClosed').checked = room.isClosed || false;
 
             document.getElementById('form-title').innerText = "✏️ עריכת חדר קיים";
             document.getElementById('form-title').classList.replace('text-blue-400', 'text-yellow-500');
@@ -177,7 +190,8 @@
                 scaryLevel: parseInt(document.getElementById('scary').value),
                 techLevel: parseInt(document.getElementById('tech').value),
                 image: document.getElementById('image').value || DEFAULT_IMAGE,
-                kidFriendly: document.getElementById('kids').checked
+                kidFriendly: document.getElementById('kids').checked,
+                isClosed: document.getElementById('isClosed').checked
             };
 
             try {
@@ -200,6 +214,7 @@
             }
         };
 
+        window.loadAdminRooms = loadAdminRooms;
         loadAdminRooms();
     </script>
 </body>
