@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הדרכון שלי | EscapeRooms</title>
+    <title>הפרופיל שלי | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
@@ -38,7 +38,7 @@
         <div class="grid grid-cols-2 gap-4">
             <div class="glass p-5 rounded-[2rem] text-center border-t-2 border-blue-500 shadow-xl">
                 <div id="count-rooms" class="text-4xl font-black text-white italic">0</div>
-                <div class="text-[9px] text-slate-500 font-bold uppercase mt-1">חדרים בדרכון</div>
+                <div class="text-[9px] text-slate-500 font-bold uppercase mt-1">חדרים בפרופיל</div>
             </div>
             <div class="glass p-5 rounded-[2rem] text-center border-t-2 border-purple-500 shadow-xl">
                 <div id="count-points" class="text-4xl font-black text-white italic">0</div>
@@ -95,7 +95,7 @@
         </a>
         <a href="passport.html" class="flex flex-col items-center gap-1 text-blue-400">
             <span class="text-xl">🛂</span>
-            <span class="text-[10px] font-bold">הדרכון</span>
+            <span class="text-[10px] font-bold">הפרופיל</span>
         </a>
     </nav>
 
@@ -164,7 +164,7 @@
                 if (count >= 10) document.getElementById('badge-master').className = "text-center badge-unlocked";
 
                 if (querySnapshot.empty) {
-                    list.innerHTML = '<div class="text-center py-10 text-slate-600 text-sm italic">טרם דירגת חדרים. בוא נתחיל לבנות את הדרכון שלך!</div>';
+                    list.innerHTML = '<div class="text-center py-10 text-slate-600 text-sm italic">טרם דירגת חדרים. בוא נתחיל לבנות את הפרופיל שלך!</div>';
                     return;
                 }
 
@@ -200,7 +200,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                list.innerHTML = '<p class="text-red-400 text-xs text-center">שגיאה בסינכרון הדרכון. נסה שוב מאוחר יותר.</p>';
+                list.innerHTML = '<p class="text-red-400 text-xs text-center">שגיאה בסינכרון הפרופיל. נסה שוב מאוחר יותר.</p>';
             }
         }
     </script>
