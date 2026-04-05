@@ -22,13 +22,39 @@
     let totalLoadedCount = 0;
     const batchSize = 15; // נשאר על 15 לביצועים מקסימליים
 
+    <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+        authDomain: "escisr.firebaseapp.com",
+        projectId: "escisr",
+        storageBucket: "escisr.firebasestorage.app",
+        messagingSenderId: "907984583225",
+        appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    
+    let kidsOnly = false;
+    let activeOnly = false;
+    let lastVisible = null;
+    let isLoading = false;
+    let totalLoadedCount = 0;
+    const batchSize = 15;
+
     async function loadRooms(isNextPage = false) {
         if (isLoading) return;
-        isLoading = true;
 
         const container = document.getElementById('rooms-container');
-        const sortVal = document.getElementById('sort-select').value;
-        
+        const sortSelect = document.getElementById('sort-select');
+        if (!container || !sortSelect) return;
+
+        const sortVal = sortSelect.value;
+        isLoading = true;
+
         if (!isNextPage) {
             container.innerHTML = `
                 <div class="col-span-full flex flex-col items-center justify-center py-24">
@@ -48,21 +74,11 @@
 
         try {
             const sortField = sortMap[sortVal] || "rating";
-            
-            // --- בניית השאילתה עם פילטרים בשרת ---
             let queryConstraints = [orderBy(sortField, "desc")];
 
-            // אם הפילטר פעיל, נוסיף תנאי "where" לשאילתה
-            if (kidsOnly) {
-                queryConstraints.push(where("kidFriendly", "==", true));
-            }
-            if (activeOnly) {
-                queryConstraints.push(where("isClosed", "==", false));
-            }
-
-            if (isNextPage && lastVisible) {
-                queryConstraints.push(startAfter(lastVisible));
-            }
+            if (kidsOnly) queryConstraints.push(where("kidFriendly", "==", true));
+            if (activeOnly) queryConstraints.push(where("isClosed", "==", false));
+            if (isNextPage && lastVisible) queryConstraints.push(startAfter(lastVisible));
             
             queryConstraints.push(limit(batchSize));
 
@@ -72,11 +88,8 @@
             lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
             
             let roomsHtml = '';
-
             querySnapshot.forEach((doc) => {
                 const room = doc.data();
-                const roomId = doc.id;
-
                 totalLoadedCount++;
                 const rating = room.rating ? room.rating.toFixed(1) : "0.0";
                 const scaryPercent = (room.scaryLevel || 0) * 10;
@@ -84,7 +97,7 @@
                 const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
 
                 roomsHtml += `
-                    <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl ${room.isClosed ? 'room-closed' : ''}" onclick="window.location.href='room.html?id=${roomId}'">
+                    <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl ${room.isClosed ? 'room-closed' : ''}" onclick="window.location.href='room.html?id=${doc.id}'">
                         <div class="relative h-48 overflow-hidden">
                             <img src="${image}" class="w-full h-full object-cover shadow-inner" alt="${room.name}">
                             ${room.isClosed ? `<div class="absolute inset-0 closed-overlay flex items-center justify-center"><span class="bg-red-600 text-white text-xs font-black px-4 py-2 rounded-full shadow-2xl border border-red-400 uppercase tracking-tighter">סגור 🔒</span></div>` : ''}
@@ -112,47 +125,43 @@
             });
 
             if (isNextPage) {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = roomsHtml;
-                while (tempDiv.firstChild) container.appendChild(tempDiv.firstChild);
+                container.insertAdjacentHTML('beforeend', roomsHtml);
             } else {
                 container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
             }
             
-            document.getElementById('rooms-count').innerText = `${totalLoadedCount} חדרים נמצאו`;
+            const countDisplay = document.getElementById('rooms-count');
+            if (countDisplay) countDisplay.innerText = `${totalLoadedCount} חדרים נמצאו`;
 
         } catch (error) {
             console.error("Error loading rooms:", error);
-            // אם קיבלת שגיאה כאן, רוב הסיכויים שצריך ליצור אינדקס ב-Firebase Console (יהיה לינק בקונסול של הדפדפן)
             if (!isNextPage) container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים.</div>';
         } finally {
             isLoading = false;
         }
     }
 
-    // --- שים לב: שיניתי את הפונקציות האלו כך שהן מאפסות את הרשימה וטוענות מחדש מהשרת ---
     window.toggleKidsFilter = () => {
         kidsOnly = !kidsOnly;
         updateBtnStyle('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
-        loadRooms(false); // טעינה חדשה מהתחלה
+        loadRooms(false);
     };
 
     window.toggleActiveFilter = () => {
         activeOnly = !activeOnly;
         updateBtnStyle('filter-active', activeOnly, 'bg-blue-600', 'border-blue-500');
-        loadRooms(false); // טעינה חדשה מהתחלה
+        loadRooms(false);
     };
 
     window.addEventListener('scroll', () => {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-            if (!isLoading && lastVisible) {
-                loadRooms(true);
-            }
+            if (!isLoading && lastVisible) loadRooms(true);
         }
     });
 
     function updateBtnStyle(id, active, activeBg, activeBorder) {
         const btn = document.getElementById(id);
+        if (!btn) return;
         if (active) {
             btn.classList.replace('bg-slate-800', activeBg);
             btn.classList.replace('border-slate-700', activeBorder);
@@ -166,6 +175,11 @@
         }
     }
 
+    // התיקון הקריטי: מחכים לטעינת ה-DOM
     window.loadRooms = loadRooms;
-    loadRooms();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => loadRooms());
+    } else {
+        loadRooms();
+    }
 </script>
