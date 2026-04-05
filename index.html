@@ -20,7 +20,7 @@
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
                 <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">EscapeRooms</h1>
-                <p id="rooms-count" class="text-slate-500 font-bold text-sm">טוען חדרים...</p>
+                <p id="rooms-count" class="text-slate-500 font-bold text-sm">מחשב נתונים...</p>
             </div>
 
             <div class="flex flex-wrap gap-3">
@@ -39,9 +39,13 @@
     <div id="rooms-container" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         </div>
 
+    <div id="loading-more" class="hidden flex justify-center py-10">
+        <div class="neon-loader scale-75"></div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -59,7 +63,8 @@
         let activeOnly = false;
         let lastVisible = null;
         let isLoading = false;
-        let totalLoadedCount = 0;
+        let totalRecordsInDB = 0;
+        let currentlyDisplayedCount = 0;
         const batchSize = 15;
 
         async function loadRooms(isNextPage = false) {
@@ -68,34 +73,49 @@
             const container = document.getElementById('rooms-container');
             const sortSelect = document.getElementById('sort-select');
             const countDisplay = document.getElementById('rooms-count');
-
-            if (!container || !sortSelect) return;
+            const loaderMore = document.getElementById('loading-more');
 
             const sortVal = sortSelect.value;
-            isLoading = true;
-
-            if (!isNextPage) {
-                container.innerHTML = `
-                    <div class="col-span-full flex flex-col items-center justify-center py-24">
-                        <div class="neon-loader mb-6"></div>
-                        <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">Scanning for rooms...</p>
-                    </div>`;
-                lastVisible = null;
-                totalLoadedCount = 0;
-            }
-
             const sortMap = {
                 'rating-desc': 'rating',
                 'reviews-desc': 'reviewCount',
                 'scary-desc': 'scaryLevel',
                 'tech-desc': 'techLevel'
             };
+            const sortField = sortMap[sortVal] || "rating";
+
+            isLoading = true;
+
+            if (!isNextPage) {
+                // הצגת מצב טעינה ראשוני
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-24">
+                        <div class="neon-loader mb-6"></div>
+                        <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">מחפש חדרים...</p>
+                    </div>`;
+                lastVisible = null;
+                currentlyDisplayedCount = 0;
+                
+                // שלב 1: חישוב סך כל החדרים ב-DB לפי הפילטרים הנוכחיים
+                try {
+                    let countConstraints = [];
+                    if (kidsOnly) countConstraints.push(where("kidFriendly", "==", true));
+                    if (activeOnly) countConstraints.push(where("isClosed", "==", false));
+                    
+                    const countQuery = query(collection(db, "rooms"), ...countConstraints);
+                    const snapshot = await getCountFromServer(countQuery);
+                    totalRecordsInDB = snapshot.data().count;
+                    countDisplay.innerText = `נמצאו ${totalRecordsInDB} חדרים פוטנציאליים`;
+                } catch (e) {
+                    console.error("Error counting:", e);
+                }
+            } else {
+                loaderMore.classList.remove('hidden');
+            }
 
             try {
-                const sortField = sortMap[sortVal] || "rating";
+                // שלב 2: בניית השאילתה להבאת הנתונים עצמם
                 let queryConstraints = [orderBy(sortField, "desc")];
-
-                // פילטרים ברמת ה-DB
                 if (kidsOnly) queryConstraints.push(where("kidFriendly", "==", true));
                 if (activeOnly) queryConstraints.push(where("isClosed", "==", false));
                 
@@ -108,12 +128,18 @@
                 const q = query(collection(db, "rooms"), ...queryConstraints);
                 const querySnapshot = await getDocs(q);
                 
+                if (querySnapshot.empty && !isNextPage) {
+                    container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים... 🤷‍♂️</div>';
+                    isLoading = false;
+                    return;
+                }
+
                 lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
                 
                 let roomsHtml = '';
                 querySnapshot.forEach((doc) => {
                     const room = doc.data();
-                    totalLoadedCount++;
+                    currentlyDisplayedCount++;
                     const rating = room.rating ? room.rating.toFixed(1) : "0.0";
                     const scaryPercent = (room.scaryLevel || 0) * 10;
                     const techPercent = (room.techLevel || 0) * 10;
@@ -150,20 +176,21 @@
                 if (isNextPage) {
                     container.insertAdjacentHTML('beforeend', roomsHtml);
                 } else {
-                    container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים... 🤷‍♂️</div>';
+                    container.innerHTML = roomsHtml;
                 }
                 
-                if (countDisplay) countDisplay.innerText = `${totalLoadedCount} חדרים נמצאו`;
+                // עדכון הטקסט של המונה (מציג את הכמות שנטענה מתוך הסך הכל)
+                countDisplay.innerText = `מציג ${currentlyDisplayedCount} מתוך ${totalRecordsInDB} חדרים`;
 
             } catch (error) {
                 console.error("Firebase Error:", error);
-                if (!isNextPage) container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינה. וודא שקיים אינדקס ב-Firebase (בדוק את ה-Console).</div>';
+                if (!isNextPage) container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינה. וודא שקיים אינדקס ב-Firebase.</div>';
             } finally {
                 isLoading = false;
+                loaderMore.classList.add('hidden');
             }
         }
 
-        // חיבור הפונקציות ל-Window כדי שיהיו זמינות ב-onclick
         window.toggleKidsFilter = () => {
             kidsOnly = !kidsOnly;
             updateBtnStyle('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
@@ -182,29 +209,26 @@
             const btn = document.getElementById(id);
             if (!btn) return;
             if (active) {
-                btn.classList.replace('bg-slate-800', activeBg);
-                btn.classList.replace('border-slate-700', activeBorder);
-                btn.classList.replace('text-slate-300', 'text-white');
+                btn.classList.add(activeBg, activeBorder, 'text-white');
+                btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-300');
             } else {
-                btn.classList.replace(activeBg, 'bg-slate-800');
-                btn.classList.replace(activeBorder, 'border-slate-700');
-                btn.classList.replace('text-white', 'text-slate-300');
+                btn.classList.remove(activeBg, activeBorder, 'text-white');
+                btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
             }
         }
 
-        // טעינה ראשונית וגלילה
+        // גלילה אינסופית
         window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                if (!isLoading && lastVisible) loadRooms(true);
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
+                // טוען עוד חדרים רק אם לא בטעינה כרגע ויש עוד חדרים ב-DB שטרם נטענו
+                if (!isLoading && lastVisible && currentlyDisplayedCount < totalRecordsInDB) {
+                    loadRooms(true);
+                }
             }
         });
 
-        // וידוא שהדף נטען לפני תחילת הקוד
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => loadRooms());
-        } else {
-            loadRooms();
-        }
+        // טעינה ראשונית
+        loadRooms();
     </script>
 </body>
 </html>
