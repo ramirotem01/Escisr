@@ -11,7 +11,6 @@
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .neon-loader { width: 50px; height: 50px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .room-card:hover { transform: translateY(-5px); transition: all 0.3s ease; border-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="p-6">
@@ -24,20 +23,18 @@
             </div>
 
             <div class="flex flex-wrap gap-3">
-                <button id="filter-kids" onclick="toggleKidsFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🧒 מתאים לילדים</button>
-                <button id="filter-active" onclick="toggleActiveFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🔓 פעיל בלבד</button>
-                <select id="sort-select" onchange="loadRooms(false)" class="bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="rating-desc">הכי מדורגים</option>
-                    <option value="reviews-desc">הכי פופולריים</option>
-                    <option value="scary-desc">הכי מפחידים</option>
-                    <option value="tech-desc">הכי טכנולוגיים</option>
+                <button id="filter-kids" onclick="toggleKidsFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all">🧒 מתאים לילדים</button>
+                <button id="filter-active" onclick="toggleActiveFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all">🔓 פעיל בלבד</button>
+                <select id="sort-select" onchange="resetAndLoad()" class="bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-2xl font-bold outline-none">
+                    <option value="rating">הכי מדורגים</option>
+                    <option value="reviewCount">הכי פופולריים</option>
+                    <option value="scaryLevel">הכי מפחידים</option>
                 </select>
             </div>
         </div>
     </div>
 
-    <div id="rooms-container" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        </div>
+    <div id="rooms-container" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -59,152 +56,107 @@
         let activeOnly = false;
         let lastVisible = null;
         let isLoading = false;
-        let totalLoadedCount = 0;
+        let currentTotal = 0;
         const batchSize = 15;
 
         async function loadRooms(isNextPage = false) {
             if (isLoading) return;
-
-            const container = document.getElementById('rooms-container');
-            const sortSelect = document.getElementById('sort-select');
-            const countDisplay = document.getElementById('rooms-count');
-
-            if (!container || !sortSelect) return;
-
-            const sortVal = sortSelect.value;
             isLoading = true;
 
+            const container = document.getElementById('rooms-container');
+            const sortField = document.getElementById('sort-select').value;
+
             if (!isNextPage) {
-                container.innerHTML = `
-                    <div class="col-span-full flex flex-col items-center justify-center py-24">
-                        <div class="neon-loader mb-6"></div>
-                        <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">Scanning for rooms...</p>
-                    </div>`;
+                container.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="neon-loader"></div></div>';
                 lastVisible = null;
-                totalLoadedCount = 0;
+                currentTotal = 0;
             }
 
-            const sortMap = {
-                'rating-desc': 'rating',
-                'reviews-desc': 'reviewCount',
-                'scary-desc': 'scaryLevel',
-                'tech-desc': 'techLevel'
-            };
-
             try {
-                const sortField = sortMap[sortVal] || "rating";
-                let queryConstraints = [orderBy(sortField, "desc")];
+                // בניית השאילתה - כאן קורה הקסם
+                let constraints = [];
 
-                // פילטרים ברמת ה-DB
-                if (kidsOnly) queryConstraints.push(where("kidFriendly", "==", true));
-                if (activeOnly) queryConstraints.push(where("isClosed", "==", false));
-                
-                if (isNextPage && lastVisible) {
-                    queryConstraints.push(startAfter(lastVisible));
-                }
-                
-                queryConstraints.push(limit(batchSize));
+                // 1. קודם כל הפילטרים (where)
+                if (kidsOnly) constraints.push(where("kidFriendly", "==", true));
+                if (activeOnly) constraints.push(where("isClosed", "==", false));
 
-                const q = query(collection(db, "rooms"), ...queryConstraints);
+                // 2. אחר כך המיון (orderBy)
+                constraints.push(orderBy(sortField, "desc"));
+
+                // 3. דפינציה (Pagination)
+                if (isNextPage && lastVisible) constraints.push(startAfter(lastVisible));
+                
+                constraints.push(limit(batchSize));
+
+                const q = query(collection(db, "rooms"), ...constraints);
                 const querySnapshot = await getDocs(q);
                 
-                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-                
-                let roomsHtml = '';
+                if (!isNextPage) container.innerHTML = ''; // מנקים את הלואודר
+
+                if (querySnapshot.empty && !isNextPage) {
+                    container.innerHTML = '<p class="col-span-full text-center text-slate-500">לא נמצאו חדרים כאלו בשרת...</p>';
+                }
+
                 querySnapshot.forEach((doc) => {
                     const room = doc.data();
-                    totalLoadedCount++;
-                    const rating = room.rating ? room.rating.toFixed(1) : "0.0";
-                    const scaryPercent = (room.scaryLevel || 0) * 10;
-                    const techPercent = (room.techLevel || 0) * 10;
-                    const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
-
-                    roomsHtml += `
-                        <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl transition-all ${room.isClosed ? 'opacity-60' : ''}" onclick="window.location.href='room.html?id=${doc.id}'">
-                            <div class="relative h-48 overflow-hidden">
-                                <img src="${image}" class="w-full h-full object-cover" alt="${room.name}">
-                                ${room.isClosed ? `<div class="absolute inset-0 bg-black/60 flex items-center justify-center"><span class="bg-red-600 text-white text-xs font-black px-4 py-2 rounded-full">סגור 🔒</span></div>` : ''}
-                                <div class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 flex flex-col items-center">
-                                    <span class="text-yellow-400 font-black text-base">⭐ ${rating}</span>
-                                    <span class="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">(${room.reviewCount || 0})</span>
-                                </div>
-                                ${room.kidFriendly && !room.isClosed ? `<div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-2 py-1 rounded-lg">מתאים לילדים</div>` : ''}
-                            </div>
-                            <div class="p-5 flex-grow">
-                                <h3 class="text-xl font-black mb-1 text-white/90">${room.name}</h3>
-                                <div class="flex items-center gap-1 text-slate-400 text-xs mb-5"><span>📍</span><span>${room.location}</span></div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase"><span>💀 פחד</span></div>
-                                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="bg-red-500 h-full" style="width: ${scaryPercent}%"></div></div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase"><span>🤖 טכנו'</span></div>
-                                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="bg-purple-500 h-full" style="width: ${techPercent}%"></div></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
+                    currentTotal++;
+                    container.insertAdjacentHTML('beforeend', renderRoomCard(doc.id, room));
                 });
 
-                if (isNextPage) {
-                    container.insertAdjacentHTML('beforeend', roomsHtml);
-                } else {
-                    container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים... 🤷‍♂️</div>';
-                }
-                
-                if (countDisplay) countDisplay.innerText = `${totalLoadedCount} חדרים נמצאו`;
+                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+                document.getElementById('rooms-count').innerText = `${currentTotal} חדרים נטענו (מתוך כלל המערכת)`;
 
             } catch (error) {
-                console.error("Firebase Error:", error);
-                if (!isNextPage) container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינה. וודא שקיים אינדקס ב-Firebase (בדוק את ה-Console).</div>';
+                console.error("Error:", error);
+                // הודעה חשובה למפתח
+                if (error.message.includes("index")) {
+                    container.innerHTML = `<div class="col-span-full p-4 bg-red-900/20 border border-red-500 rounded-xl text-red-200 text-sm">
+                        <b>חסר אינדקס ב-Firebase!</b><br>
+                        פתח את ה-Console בדפדפן (F12), תראה לינק כחול בתוך השגיאה. תלחץ עליו כדי לאשר ל-Firebase ליצור את האינדקס הזה.
+                    </div>`;
+                }
             } finally {
                 isLoading = false;
             }
         }
 
-        // חיבור הפונקציות ל-Window כדי שיהיו זמינות ב-onclick
+        function renderRoomCard(id, room) {
+            const rating = (room.rating || 0).toFixed(1);
+            return `
+                <div class="room-card glass rounded-[2rem] overflow-hidden flex flex-col shadow-2xl" onclick="window.location.href='room.html?id=${id}'">
+                    <img src="${room.image || 'https://via.placeholder.com/400'}" class="h-48 w-full object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-white">${room.name}</h3>
+                        <p class="text-slate-400 text-sm mb-4">📍 ${room.location}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400 font-bold">⭐ ${rating}</span>
+                            ${room.kidFriendly ? '<span class="text-green-400 text-xs font-bold bg-green-400/10 px-2 py-1 rounded">לילדים</span>' : ''}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
         window.toggleKidsFilter = () => {
             kidsOnly = !kidsOnly;
-            updateBtnStyle('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
+            document.getElementById('filter-kids').classList.toggle('bg-green-600');
             loadRooms(false);
         };
 
         window.toggleActiveFilter = () => {
             activeOnly = !activeOnly;
-            updateBtnStyle('filter-active', activeOnly, 'bg-blue-600', 'border-blue-500');
+            document.getElementById('filter-active').classList.toggle('bg-blue-600');
             loadRooms(false);
         };
 
-        window.loadRooms = loadRooms;
+        window.resetAndLoad = () => loadRooms(false);
 
-        function updateBtnStyle(id, active, activeBg, activeBorder) {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            if (active) {
-                btn.classList.replace('bg-slate-800', activeBg);
-                btn.classList.replace('border-slate-700', activeBorder);
-                btn.classList.replace('text-slate-300', 'text-white');
-            } else {
-                btn.classList.replace(activeBg, 'bg-slate-800');
-                btn.classList.replace(activeBorder, 'border-slate-700');
-                btn.classList.replace('text-white', 'text-slate-300');
-            }
-        }
-
-        // טעינה ראשונית וגלילה
         window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
                 if (!isLoading && lastVisible) loadRooms(true);
             }
         });
 
-        // וידוא שהדף נטען לפני תחילת הקוד
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => loadRooms());
-        } else {
-            loadRooms();
-        }
+        loadRooms();
     </script>
 </body>
 </html>
