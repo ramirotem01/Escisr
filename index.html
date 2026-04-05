@@ -29,9 +29,11 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Hide scrollbar for Chrome, Safari and Opera */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        #search-bar-container { transition: all 0.3s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        #search-bar-container.open { max-height: 100px; opacity: 1; padding: 1rem; }
     </style>
 </head>
 <body class="pb-24">
@@ -51,22 +53,38 @@
         </div>
     </header>
 
-    <section class="p-4 bg-slate-900/50 flex items-center gap-3 border-b border-slate-800 sticky top-[89px] z-40 backdrop-blur-sm overflow-x-auto hide-scrollbar">
-        <button id="filter-kids" onclick="toggleKidsFilter()" 
-            class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2 hover:border-slate-500">
-            <span>👼</span>
-            <span>מתאים לילדים</span>
-        </button>
+    <section class="bg-slate-900/50 border-b border-slate-800 sticky top-[89px] z-40 backdrop-blur-sm">
+        <div class="p-4 flex items-center gap-3 overflow-x-auto hide-scrollbar">
+            <button id="btn-search-toggle" onclick="toggleSearch()" 
+                class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold transition-all text-slate-300 flex items-center gap-2 hover:border-blue-500">
+                <span>🔍</span>
+                <span>חיפוש</span>
+            </button>
 
-        <button id="filter-active" onclick="toggleActiveFilter()" 
-            class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2 hover:border-slate-500">
-            <span>🔓</span>
-            <span>פעילים בלבד</span>
-        </button>
+            <button id="filter-kids" onclick="toggleKidsFilter()" 
+                class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2 hover:border-slate-500">
+                <span>👼</span>
+                <span>מתאים לילדים</span>
+            </button>
+
+            <button id="filter-active" onclick="toggleActiveFilter()" 
+                class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2 hover:border-slate-500">
+                <span>🔓</span>
+                <span>פעילים בלבד</span>
+            </button>
+        </div>
+
+        <div id="search-bar-container" class="border-t border-slate-800/50 bg-slate-900">
+            <div class="relative max-w-2xl mx-auto">
+                <input type="text" id="search-input" placeholder="הקלד שם של חדר לחיפוש..." 
+                    class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 px-6 text-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-white placeholder:text-slate-500">
+                <div id="search-clear" onclick="clearSearch()" class="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer text-slate-500 hover:text-white hidden">✕</div>
+            </div>
+        </div>
     </section>
 
     <main class="p-6 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="rooms-container">
-        </main>
+    </main>
 
     <div id="scroll-anchor" class="h-32 flex flex-col items-center justify-center gap-4">
         <div id="footer-loader" class="neon-loader hidden"></div>
@@ -110,11 +128,13 @@
         
         let kidsOnly = false;
         let activeOnly = false;
+        let searchQueryStr = "";
         let lastVisible = null;
         let isLoading = false;
         let totalCount = 0;
         let loadedSoFar = 0;
         const batchSize = 12;
+        let debounceTimer;
 
         async function loadRooms(isNextPage = false) {
             if (isLoading) return;
@@ -139,22 +159,40 @@
                 loadedSoFar = 0;
                 endMessage.classList.add('hidden');
 
-                // Get total count based on filters
+                // Prepare Count Query
                 const countConstraints = [];
                 if (kidsOnly) countConstraints.push(where("kidFriendly", "==", true));
                 if (activeOnly) countConstraints.push(where("isClosed", "==", false));
+                if (searchQueryStr) {
+                    countConstraints.push(where("name", ">=", searchQueryStr));
+                    countConstraints.push(where("name", "<=", searchQueryStr + '\uf8ff'));
+                }
                 
-                const qCount = query(collection(db, "rooms"), ...countConstraints);
-                const countSnapshot = await getCountFromServer(qCount);
-                totalCount = countSnapshot.data().count;
+                try {
+                    const qCount = query(collection(db, "rooms"), ...countConstraints);
+                    const countSnapshot = await getCountFromServer(qCount);
+                    totalCount = countSnapshot.data().count;
+                } catch(e) { totalCount = 0; }
             } else {
                 footerLoader.classList.remove('hidden');
             }
 
             try {
-                let queryConstraints = [orderBy(sortField, "desc")];
+                let queryConstraints = [];
+                
+                // Filtering Logic
                 if (kidsOnly) queryConstraints.push(where("kidFriendly", "==", true));
                 if (activeOnly) queryConstraints.push(where("isClosed", "==", false));
+                
+                // Search Logic (Firebase Prefix Search)
+                if (searchQueryStr) {
+                    queryConstraints.push(where("name", ">=", searchQueryStr));
+                    queryConstraints.push(where("name", "<=", searchQueryStr + '\uf8ff'));
+                    queryConstraints.push(orderBy("name")); // Required for range filter
+                } else {
+                    queryConstraints.push(orderBy(sortField, "desc"));
+                }
+
                 if (isNextPage && lastVisible) queryConstraints.push(startAfter(lastVisible));
                 queryConstraints.push(limit(batchSize));
 
@@ -162,7 +200,7 @@
                 const querySnapshot = await getDocs(q);
                 
                 if (querySnapshot.empty && !isNextPage) {
-                    container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
+                    container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לחיפוש... 🤷‍♂️</div>';
                     countDisplay.innerText = "0 חדרים נמצאו";
                     return;
                 }
@@ -186,7 +224,7 @@
 
             } catch (error) {
                 console.error("Error:", error);
-                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10 font-bold">שגיאה בחיבור למסד הנתונים.</div>';
+                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10 font-bold">שגיאה בשליפת הנתונים. וודא שקיים Index ב-Firebase לשילוב השדות.</div>';
             } finally {
                 isLoading = false;
                 footerLoader.classList.add('hidden');
@@ -194,7 +232,7 @@
         }
 
         function renderRoomCard(id, room) {
-            const rating = room.rating ? room.rating.toFixed(1) : "0.0";
+            const rating = room.rating ? Number(room.rating).toFixed(1) : "0.0";
             const scaryPercent = (room.scaryLevel || 0) * 10;
             const techPercent = (room.techLevel || 0) * 10;
             const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
@@ -248,6 +286,32 @@
                 </div>`;
         }
 
+        // Global functions for UI interaction
+        window.toggleSearch = () => {
+            const container = document.getElementById('search-bar-container');
+            const input = document.getElementById('search-input');
+            const btn = document.getElementById('btn-search-toggle');
+            
+            container.classList.toggle('open');
+            if(container.classList.contains('open')) {
+                input.focus();
+                btn.classList.replace('bg-slate-800', 'bg-blue-600');
+                btn.classList.replace('text-slate-300', 'text-white');
+            } else {
+                btn.classList.replace('bg-blue-600', 'bg-slate-800');
+                btn.classList.replace('text-white', 'text-slate-300');
+                if(searchQueryStr) clearSearch();
+            }
+        };
+
+        window.clearSearch = () => {
+            const input = document.getElementById('search-input');
+            input.value = "";
+            searchQueryStr = "";
+            document.getElementById('search-clear').classList.add('hidden');
+            loadRooms(false);
+        };
+
         window.toggleKidsFilter = () => {
             kidsOnly = !kidsOnly;
             updateBtnUI('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
@@ -273,7 +337,22 @@
             }
         }
 
-        // Infinite Scroll Logic
+        // Search Input Event Listener with Debounce
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            const clearBtn = document.getElementById('search-clear');
+            
+            if(val) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                searchQueryStr = val;
+                loadRooms(false);
+            }, 500);
+        });
+
+        // Infinite Scroll
         window.onscroll = () => {
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
                 if (!isLoading && loadedSoFar < totalCount) {
@@ -282,7 +361,7 @@
             }
         };
 
-        window.loadRooms = loadRooms;
+        // Initial Load
         loadRooms();
     </script>
 </body>
