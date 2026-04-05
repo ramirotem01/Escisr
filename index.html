@@ -97,7 +97,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -113,16 +113,27 @@
         
         let kidsOnly = false;
         let activeOnly = false;
+        let lastVisible = null;
+        let isLoading = false;
+        let totalLoadedCount = 0;
+        const batchSize = 30;
 
-        async function loadRooms() {
+        async function loadRooms(isNextPage = false) {
+            if (isLoading) return;
+            isLoading = true;
+
             const container = document.getElementById('rooms-container');
             const sortVal = document.getElementById('sort-select').value;
             
-            container.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-24">
-                    <div class="neon-loader mb-6"></div>
-                    <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">Scanning for rooms...</p>
-                </div>`;
+            if (!isNextPage) {
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-24">
+                        <div class="neon-loader mb-6"></div>
+                        <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">Scanning for rooms...</p>
+                    </div>`;
+                lastVisible = null;
+                totalLoadedCount = 0;
+            }
 
             const sortMap = {
                 'rating-desc': 'rating',
@@ -132,21 +143,28 @@
             };
 
             try {
-                const q = query(collection(db, "rooms"), orderBy(sortMap[sortVal] || "rating", "desc"));
+                let q;
+                const sortField = sortMap[sortVal] || "rating";
+                
+                if (isNextPage && lastVisible) {
+                    q = query(collection(db, "rooms"), orderBy(sortField, "desc"), startAfter(lastVisible), limit(batchSize));
+                } else {
+                    q = query(collection(db, "rooms"), orderBy(sortField, "desc"), limit(batchSize));
+                }
+
                 const querySnapshot = await getDocs(q);
+                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
                 
                 let roomsHtml = '';
-                let count = 0;
 
                 querySnapshot.forEach((doc) => {
                     const room = doc.data();
                     const roomId = doc.id;
 
-                    // פילטרים
                     if (kidsOnly && !room.kidFriendly) return;
                     if (activeOnly && room.isClosed) return;
 
-                    count++;
+                    totalLoadedCount++;
                     const rating = room.rating ? room.rating.toFixed(1) : "0.0";
                     const scaryPercent = (room.scaryLevel || 0) * 10;
                     const techPercent = (room.techLevel || 0) * 10;
@@ -198,14 +216,33 @@
                         </div>`;
                 });
 
-                container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
-                document.getElementById('rooms-count').innerText = `${count} חדרים נמצאו`;
+                if (isNextPage) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = roomsHtml;
+                    while (tempDiv.firstChild) {
+                        container.appendChild(tempDiv.firstChild);
+                    }
+                } else {
+                    container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
+                }
+                
+                document.getElementById('rooms-count').innerText = `${totalLoadedCount} חדרים נמצאו`;
 
             } catch (error) {
                 console.error("Error loading rooms:", error);
-                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים.</div>';
+                if (!isNextPage) container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינת הנתונים.</div>';
+            } finally {
+                isLoading = false;
             }
         }
+
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                if (!isLoading && lastVisible) {
+                    loadRooms(true);
+                }
+            }
+        });
 
         window.toggleKidsFilter = () => {
             kidsOnly = !kidsOnly;
