@@ -9,9 +9,9 @@
     <style>
         body { font-family: 'Heebo', sans-serif; background: #020617; color: white; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .neon-loader { width: 40px; height: 40px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        .neon-loader { width: 50px; height: 50px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .room-card:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+        .room-card:hover { transform: translateY(-5px); transition: all 0.3s ease; border-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="p-6">
@@ -20,27 +20,28 @@
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
                 <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">EscapeRooms</h1>
-                <p id="rooms-count-header" class="text-slate-500 font-bold text-sm tracking-wide">בודק כמה חדרים יש במערכת...</p>
+                <p id="rooms-count" class="text-slate-500 font-bold text-sm">טוען חדרים...</p>
             </div>
 
             <div class="flex flex-wrap gap-3">
-                <button id="filter-kids" onclick="toggleKidsFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🧒 לילדים</button>
+                <button id="filter-kids" onclick="toggleKidsFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🧒 מתאים לילדים</button>
                 <button id="filter-active" onclick="toggleActiveFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🔓 פעיל בלבד</button>
-                <select id="sort-select" onchange="loadRooms(false)" class="bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-2xl font-bold outline-none cursor-pointer">
-                    <option value="rating">הכי מדורגים</option>
-                    <option value="reviewCount">הכי פופולריים</option>
-                    <option value="scaryLevel">הכי מפחידים</option>
+                <select id="sort-select" onchange="loadRooms(false)" class="bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="rating-desc">הכי מדורגים</option>
+                    <option value="reviews-desc">הכי פופולריים</option>
+                    <option value="scary-desc">הכי מפחידים</option>
+                    <option value="tech-desc">הכי טכנולוגיים</option>
                 </select>
             </div>
         </div>
     </div>
 
-    <div id="rooms-container" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20"></div>
+    <div id="rooms-container" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        </div>
 
     <script type="module">
-        // הוספנו את getCountFromServer ל-imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -58,113 +59,152 @@
         let activeOnly = false;
         let lastVisible = null;
         let isLoading = false;
+        let totalLoadedCount = 0;
         const batchSize = 15;
-
-        // --- 1. פונקציה חדשה שמביאה את הסה"כ האמיתי מהשרת ---
-        async function updateTotalCount() {
-            try {
-                const coll = collection(db, "rooms");
-                // אפשר להוסיף כאן 'where' אם רוצים שהספירה תתעדכן לפי הפילטרים
-                let q = query(coll);
-                if (kidsOnly) q = query(coll, where("kidFriendly", "==", true));
-                if (activeOnly) q = query(q, where("isClosed", "==", false));
-
-                const snapshot = await getCountFromServer(q);
-                const total = snapshot.data().count;
-                document.getElementById('rooms-count-header').innerText = `נמצאו ${total} חדרים התואמים לחיפוש שלך`;
-            } catch (e) {
-                console.error("Count error:", e);
-            }
-        }
 
         async function loadRooms(isNextPage = false) {
             if (isLoading) return;
-            isLoading = true;
 
             const container = document.getElementById('rooms-container');
-            const sortField = document.getElementById('sort-select').value;
+            const sortSelect = document.getElementById('sort-select');
+            const countDisplay = document.getElementById('rooms-count');
+
+            if (!container || !sortSelect) return;
+
+            const sortVal = sortSelect.value;
+            isLoading = true;
 
             if (!isNextPage) {
-                container.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="neon-loader"></div></div>';
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-24">
+                        <div class="neon-loader mb-6"></div>
+                        <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">Scanning for rooms...</p>
+                    </div>`;
                 lastVisible = null;
-                // בכל פעם שמשנים פילטר, נעדכן גם את הספירה הכללית ב-Header
-                updateTotalCount();
+                totalLoadedCount = 0;
             }
 
-            try {
-                let constraints = [];
-                if (kidsOnly) constraints.push(where("kidFriendly", "==", true));
-                if (activeOnly) constraints.push(where("isClosed", "==", false));
-                constraints.push(orderBy(sortField, "desc"));
-                
-                if (isNextPage && lastVisible) constraints.push(startAfter(lastVisible));
-                constraints.push(limit(batchSize));
+            const sortMap = {
+                'rating-desc': 'rating',
+                'reviews-desc': 'reviewCount',
+                'scary-desc': 'scaryLevel',
+                'tech-desc': 'techLevel'
+            };
 
-                const q = query(collection(db, "rooms"), ...constraints);
+            try {
+                const sortField = sortMap[sortVal] || "rating";
+                let queryConstraints = [orderBy(sortField, "desc")];
+
+                // פילטרים ברמת ה-DB
+                if (kidsOnly) queryConstraints.push(where("kidFriendly", "==", true));
+                if (activeOnly) queryConstraints.push(where("isClosed", "==", false));
+                
+                if (isNextPage && lastVisible) {
+                    queryConstraints.push(startAfter(lastVisible));
+                }
+                
+                queryConstraints.push(limit(batchSize));
+
+                const q = query(collection(db, "rooms"), ...queryConstraints);
                 const querySnapshot = await getDocs(q);
                 
-                if (!isNextPage) container.innerHTML = ''; 
-
+                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+                
+                let roomsHtml = '';
                 querySnapshot.forEach((doc) => {
                     const room = doc.data();
-                    container.insertAdjacentHTML('beforeend', renderRoomCard(doc.id, room));
+                    totalLoadedCount++;
+                    const rating = room.rating ? room.rating.toFixed(1) : "0.0";
+                    const scaryPercent = (room.scaryLevel || 0) * 10;
+                    const techPercent = (room.techLevel || 0) * 10;
+                    const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
+
+                    roomsHtml += `
+                        <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl transition-all ${room.isClosed ? 'opacity-60' : ''}" onclick="window.location.href='room.html?id=${doc.id}'">
+                            <div class="relative h-48 overflow-hidden">
+                                <img src="${image}" class="w-full h-full object-cover" alt="${room.name}">
+                                ${room.isClosed ? `<div class="absolute inset-0 bg-black/60 flex items-center justify-center"><span class="bg-red-600 text-white text-xs font-black px-4 py-2 rounded-full">סגור 🔒</span></div>` : ''}
+                                <div class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 flex flex-col items-center">
+                                    <span class="text-yellow-400 font-black text-base">⭐ ${rating}</span>
+                                    <span class="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">(${room.reviewCount || 0})</span>
+                                </div>
+                                ${room.kidFriendly && !room.isClosed ? `<div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-2 py-1 rounded-lg">מתאים לילדים</div>` : ''}
+                            </div>
+                            <div class="p-5 flex-grow">
+                                <h3 class="text-xl font-black mb-1 text-white/90">${room.name}</h3>
+                                <div class="flex items-center gap-1 text-slate-400 text-xs mb-5"><span>📍</span><span>${room.location}</span></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase"><span>💀 פחד</span></div>
+                                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="bg-red-500 h-full" style="width: ${scaryPercent}%"></div></div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase"><span>🤖 טכנו'</span></div>
+                                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden"><div class="bg-purple-500 h-full" style="width: ${techPercent}%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
                 });
 
-                lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+                if (isNextPage) {
+                    container.insertAdjacentHTML('beforeend', roomsHtml);
+                } else {
+                    container.innerHTML = roomsHtml || '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים... 🤷‍♂️</div>';
+                }
+                
+                if (countDisplay) countDisplay.innerText = `${totalLoadedCount} חדרים נמצאו`;
 
             } catch (error) {
-                console.error("Error:", error);
-                if (error.message.includes("index")) {
-                    container.innerHTML = '<div class="col-span-full p-4 bg-red-900/20 text-red-200 rounded-xl text-center">חסר אינדקס ב-Firebase. בדוק את ה-Console לקישור ליצירה.</div>';
-                }
+                console.error("Firebase Error:", error);
+                if (!isNextPage) container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10">שגיאה בטעינה. וודא שקיים אינדקס ב-Firebase (בדוק את ה-Console).</div>';
             } finally {
                 isLoading = false;
             }
         }
 
-        function renderRoomCard(id, room) {
-            const rating = (room.rating || 0).toFixed(1);
-            const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
-            return `
-                <div class="room-card glass rounded-[2rem] overflow-hidden flex flex-col shadow-2xl cursor-pointer" onclick="window.location.href='room.html?id=${id}'">
-                    <div class="relative h-48 overflow-hidden">
-                        <img src="${image}" class="w-full h-full object-cover">
-                        <div class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-yellow-400 font-bold">⭐ ${rating}</div>
-                    </div>
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold mb-1">${room.name}</h3>
-                        <p class="text-slate-400 text-xs mb-4">📍 ${room.location}</p>
-                        <div class="flex gap-2">
-                             ${room.kidFriendly ? '<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-md border border-green-500/30">ילדים</span>' : ''}
-                             ${!room.isClosed ? '<span class="bg-blue-500/20 text-blue-400 text-[10px] px-2 py-1 rounded-md border border-blue-500/30">פעיל</span>' : ''}
-                        </div>
-                    </div>
-                </div>`;
-        }
-
+        // חיבור הפונקציות ל-Window כדי שיהיו זמינות ב-onclick
         window.toggleKidsFilter = () => {
             kidsOnly = !kidsOnly;
-            document.getElementById('filter-kids').classList.toggle('bg-green-600');
+            updateBtnStyle('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
             loadRooms(false);
         };
 
         window.toggleActiveFilter = () => {
             activeOnly = !activeOnly;
-            document.getElementById('filter-active').classList.toggle('bg-blue-600');
+            updateBtnStyle('filter-active', activeOnly, 'bg-blue-600', 'border-blue-500');
             loadRooms(false);
         };
 
         window.loadRooms = loadRooms;
 
+        function updateBtnStyle(id, active, activeBg, activeBorder) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            if (active) {
+                btn.classList.replace('bg-slate-800', activeBg);
+                btn.classList.replace('border-slate-700', activeBorder);
+                btn.classList.replace('text-slate-300', 'text-white');
+            } else {
+                btn.classList.replace(activeBg, 'bg-slate-800');
+                btn.classList.replace(activeBorder, 'border-slate-700');
+                btn.classList.replace('text-white', 'text-slate-300');
+            }
+        }
+
+        // טעינה ראשונית וגלילה
         window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
                 if (!isLoading && lastVisible) loadRooms(true);
             }
         });
 
-        // הרצה ראשונית
-        loadRooms();
-        updateTotalCount();
+        // וידוא שהדף נטען לפני תחילת הקוד
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => loadRooms());
+        } else {
+            loadRooms();
+        }
     </script>
 </body>
 </html>
