@@ -3,46 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escape Rooms Israel</title>
+    
+    <title>EscapeRooms | מצא את חדר הבריחה הבא שלך</title>
+    <meta name="description" content="פורטל חדרי הבריחה המוביל בישראל. השוואת מחירים, דירוגי גולשים, סינון לפי רמת פחד וטכנולוגיה. מצאו את האתגר הבא שלכם!">
+    <meta name="keywords" content="חדרי בריחה, אסקייפ רום, חדר בריחה לילדים, חדר בריחה מפחיד, השוואת חדרי בריחה, אטרקציות">
+    <meta name="author" content="EscapeRooms Israel">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;400;700;900&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Heebo', sans-serif; background: #020617; color: white; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .neon-loader { width: 40px; height: 40px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        body { background-color: #020617; color: white; font-family: 'Heebo', sans-serif; scroll-behavior: smooth; }
+        .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .room-card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        .room-card:hover { transform: translateY(-8px); border-color: #3b82f6; box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.2); }
+        
+        .neon-loader {
+            width: 45px; height: 45px;
+            border: 3px solid transparent;
+            border-top-color: #3b82f6;
+            border-bottom-color: #a855f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            filter: drop-shadow(0 0 5px #3b82f6);
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .room-card:hover { transform: translateY(-5px); transition: all 0.3s ease; border-color: rgba(59, 130, 246, 0.5); }
+
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="p-6">
+<body class="pb-24">
 
-    <div class="max-w-7xl mx-auto mb-10">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div>
-                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">EscapeRooms</h1>
-                <p id="rooms-count" class="text-slate-500 font-bold text-sm italic">מחשב נתונים...</p>
-            </div>
-
-            <div class="flex flex-wrap gap-3">
-                <button id="filter-kids" onclick="toggleKidsFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🧒 מתאים לילדים</button>
-                <button id="filter-active" onclick="toggleActiveFilter()" class="bg-slate-800 border border-slate-700 text-slate-300 px-6 py-3 rounded-2xl font-bold transition-all hover:bg-slate-700">🔓 פעיל בלבד</button>
-                <select id="sort-select" onchange="loadRooms(false)" class="bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="rating-desc">הכי מדורגים</option>
-                    <option value="reviews-desc">הכי פופולריים</option>
-                    <option value="scary-desc">הכי מפחידים</option>
-                    <option value="tech-desc">הכי טכנולוגיים</option>
-                </select>
-            </div>
+    <header class="p-6 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms</h1>
+            <p id="rooms-count" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">סורק חדרים...</p>
         </div>
-    </div>
-
-    <div id="rooms-container" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="flex gap-2">
+            <select id="sort-select" onchange="loadRooms(false)" class="bg-slate-800 border border-slate-700 rounded-xl text-xs p-2.5 outline-none text-slate-300 focus:border-blue-500 transition-all cursor-pointer">
+                <option value="rating-desc">🏆 המדורגים ביותר</option>
+                <option value="reviews-desc">🔥 הפופולריים ביותר</option>
+                <option value="scary-desc">💀 הכי מפחידים</option>
+                <option value="tech-desc">🤖 הכי טכנולוגיים</option>
+            </select>
         </div>
+    </header>
 
-    <div id="scroll-anchor" class="h-20 flex items-center justify-center mt-10">
+    <section class="p-4 bg-slate-900/50 flex items-center gap-3 border-b border-slate-800 sticky top-[89px] z-40 backdrop-blur-sm overflow-x-auto hide-scrollbar">
+        <button id="filter-kids" onclick="toggleKidsFilter()" 
+            class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2 hover:border-slate-500">
+            <span>👼</span>
+            <span>מתאים לילדים</span>
+        </button>
+
+        <button id="filter-active" onclick="toggleActiveFilter()" 
+            class="px-5 py-2.5 rounded-full bg-slate-800 border border-slate-700 text-[12px] font-bold whitespace-nowrap transition-all text-slate-300 flex items-center gap-2 hover:border-slate-500">
+            <span>🔓</span>
+            <span>פעילים בלבד</span>
+        </button>
+    </section>
+
+    <main class="p-6 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="rooms-container">
+        </main>
+
+    <div id="scroll-anchor" class="h-32 flex flex-col items-center justify-center gap-4">
         <div id="footer-loader" class="neon-loader hidden"></div>
-        <p id="end-message" class="text-slate-600 font-bold hidden">זהו, הגעת לסוף הרשימה ✨</p>
+        <p id="end-message" class="text-slate-500 font-bold hidden text-sm">זהו, הגעת לסוף הרשימה ✨</p>
     </div>
+
+    <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-white/5 p-3 flex justify-around items-center z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 text-blue-400">
+            <span class="text-xl">🏠</span>
+            <span class="text-[10px] font-bold">ראשי</span>
+        </a>
+        <a href="compare.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">⚖️</span>
+            <span class="text-[10px] font-bold">השוואה</span>
+        </a>
+        <a href="add-review.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">✍️</span>
+            <span class="text-[10px] font-bold">דירוג</span>
+        </a>
+        <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-400 transition">
+            <span class="text-xl">🛂</span>
+            <span class="text-[10px] font-bold">פרופיל</span>
+        </a>
+    </nav>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -66,9 +113,8 @@
         let isLoading = false;
         let totalCount = 0;
         let loadedSoFar = 0;
-        const batchSize = 15;
+        const batchSize = 12;
 
-        // טעינת חדרים
         async function loadRooms(isNextPage = false) {
             if (isLoading) return;
             isLoading = true;
@@ -83,12 +129,16 @@
             const sortField = sortMap[sortVal] || "rating";
 
             if (!isNextPage) {
-                container.innerHTML = '<div class="col-span-full text-center py-20 animate-pulse text-blue-400">טוען...</div>';
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-24">
+                        <div class="neon-loader mb-6"></div>
+                        <p class="text-blue-400 font-bold tracking-widest text-xs uppercase animate-pulse">מחפש הרפתקאות...</p>
+                    </div>`;
                 lastVisible = null;
                 loadedSoFar = 0;
                 endMessage.classList.add('hidden');
 
-                // שליפת כמות כוללת בלבד (לא טוען את האובייקטים!)
+                // Get total count based on filters
                 const countConstraints = [];
                 if (kidsOnly) countConstraints.push(where("kidFriendly", "==", true));
                 if (activeOnly) countConstraints.push(where("isClosed", "==", false));
@@ -96,13 +146,11 @@
                 const qCount = query(collection(db, "rooms"), ...countConstraints);
                 const countSnapshot = await getCountFromServer(qCount);
                 totalCount = countSnapshot.data().count;
-                countDisplay.innerText = `נמצאו ${totalCount} חדרים`;
             } else {
                 footerLoader.classList.remove('hidden');
             }
 
             try {
-                // שליפת הנתונים בפועל (רק 15 בכל פעם)
                 let queryConstraints = [orderBy(sortField, "desc")];
                 if (kidsOnly) queryConstraints.push(where("kidFriendly", "==", true));
                 if (activeOnly) queryConstraints.push(where("isClosed", "==", false));
@@ -113,8 +161,8 @@
                 const querySnapshot = await getDocs(q);
                 
                 if (querySnapshot.empty && !isNextPage) {
-                    container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500">אין חדרים התואמים לחיפוש.</div>';
-                    isLoading = false;
+                    container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 font-bold">לא נמצאו חדרים התואמים לסינון... 🤷‍♂️</div>';
+                    countDisplay.innerText = "0 חדרים נמצאו";
                     return;
                 }
 
@@ -122,18 +170,13 @@
                 let roomsHtml = '';
 
                 querySnapshot.forEach((doc) => {
-                    const room = doc.data();
                     loadedSoFar++;
-                    roomsHtml += renderRoomCard(doc.id, room);
+                    roomsHtml += renderRoomCard(doc.id, doc.data());
                 });
 
-                if (isNextPage) {
-                    container.insertAdjacentHTML('beforeend', roomsHtml);
-                } else {
-                    container.innerHTML = roomsHtml;
-                }
+                if (!isNextPage) container.innerHTML = '';
+                container.insertAdjacentHTML('beforeend', roomsHtml);
 
-                // עדכון מונה ללא טעינת כל הנתונים
                 countDisplay.innerText = `מציג ${loadedSoFar} מתוך ${totalCount} חדרים`;
 
                 if (loadedSoFar >= totalCount) {
@@ -142,6 +185,7 @@
 
             } catch (error) {
                 console.error("Error:", error);
+                container.innerHTML = '<div class="col-span-full text-center text-red-400 p-10 font-bold">שגיאה בחיבור למסד הנתונים.</div>';
             } finally {
                 isLoading = false;
                 footerLoader.classList.add('hidden');
@@ -150,43 +194,94 @@
 
         function renderRoomCard(id, room) {
             const rating = room.rating ? room.rating.toFixed(1) : "0.0";
+            const scaryPercent = (room.scaryLevel || 0) * 10;
+            const techPercent = (room.techLevel || 0) * 10;
             const image = room.image || 'https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=400';
+            
             return `
-                <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer ${room.isClosed ? 'opacity-60' : ''}" onclick="window.location.href='room.html?id=${id}'">
-                    <div class="relative h-48">
-                        <img src="${image}" class="w-full h-full object-cover">
-                        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl text-yellow-400 font-bold">⭐ ${rating}</div>
+                <div class="room-card glass rounded-[2.5rem] overflow-hidden flex flex-col cursor-pointer shadow-2xl ${room.isClosed ? 'border-red-900/50' : ''}" onclick="window.location.href='room.html?id=${id}'">
+                    <div class="relative h-52 overflow-hidden">
+                        <img src="${image}" class="w-full h-full object-cover ${room.isClosed ? 'grayscale brightness-50' : ''}" alt="${room.name}">
+                        
+                        ${room.isClosed ? `
+                            <div class="absolute inset-0 bg-red-600/10 flex items-center justify-center">
+                                <span class="bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded-full border border-red-400 uppercase">סגור 🔒</span>
+                            </div>
+                        ` : ''}
+
+                        <div class="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 shadow-xl flex flex-col items-center min-w-[60px]">
+                            <span class="text-yellow-400 font-black text-base">⭐ ${rating}</span>
+                            <span class="text-[8px] text-slate-400 font-bold uppercase">(${room.reviewCount || 0} מדרגים)</span>
+                        </div>
+                        
+                        ${room.kidFriendly && !room.isClosed ? `
+                            <div class="absolute bottom-4 right-4 bg-green-500/90 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase shadow-lg">🧒 מתאים לילדים</div>
+                        ` : ''}
                     </div>
-                    <div class="p-5">
-                        <h3 class="text-xl font-black">${room.name}</h3>
-                        <p class="text-slate-400 text-sm italic">📍 ${room.location}</p>
+
+                    <div class="p-6 flex-grow ${room.isClosed ? 'opacity-60' : ''}">
+                        <h3 class="text-xl font-black mb-1 text-white/95">${room.name}</h3>
+                        <div class="flex items-center gap-1 text-slate-400 text-xs mb-6">
+                            <span>📍</span><span>${room.location}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-2">
+                                    <span>💀 פחד</span><span class="text-slate-300">${room.scaryLevel || 0}/10</span>
+                                </div>
+                                <div class="w-full bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-red-600 to-orange-500 h-full rounded-full" style="width: ${scaryPercent}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[9px] font-bold text-slate-500 uppercase mb-2">
+                                    <span>🤖 טכנולוגיה</span><span class="text-slate-300">${room.techLevel || 0}/10</span>
+                                </div>
+                                <div class="w-full bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-blue-600 to-purple-500 h-full rounded-full" style="width: ${techPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>`;
         }
 
-        // ניהול פילטרים - קריאה חדשה ל-DB בכל שינוי
-        window.toggleKidsFilter = () => { kidsOnly = !kidsOnly; updateUI('filter-kids', kidsOnly); loadRooms(false); };
-        window.toggleActiveFilter = () => { activeOnly = !activeOnly; updateUI('filter-active', activeOnly); loadRooms(false); };
-        window.loadRooms = loadRooms;
+        window.toggleKidsFilter = () => {
+            kidsOnly = !kidsOnly;
+            updateBtnUI('filter-kids', kidsOnly, 'bg-green-600', 'border-green-500');
+            loadRooms(false);
+        };
 
-        function updateUI(id, active) {
+        window.toggleActiveFilter = () => {
+            activeOnly = !activeOnly;
+            updateBtnUI('filter-active', activeOnly, 'bg-blue-600', 'border-blue-500');
+            loadRooms(false);
+        };
+
+        function updateBtnUI(id, active, activeBg, activeBorder) {
             const btn = document.getElementById(id);
             if (active) {
-                btn.classList.replace('bg-slate-800', 'bg-blue-600');
-                btn.classList.add('text-white');
+                btn.classList.replace('bg-slate-800', activeBg);
+                btn.classList.replace('border-slate-700', activeBorder);
+                btn.classList.replace('text-slate-300', 'text-white');
             } else {
-                btn.classList.replace('bg-blue-600', 'bg-slate-800');
-                btn.classList.remove('text-white');
+                btn.classList.replace(activeBg, 'bg-slate-800');
+                btn.classList.replace(activeBorder, 'border-slate-700');
+                btn.classList.replace('text-white', 'text-slate-300');
             }
         }
 
-        // גילוי גלילה (Infinite Scroll)
+        // Infinite Scroll Logic
         window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                if (!isLoading && loadedSoFar < totalCount) loadRooms(true);
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
+                if (!isLoading && loadedSoFar < totalCount) {
+                    loadRooms(true);
+                }
             }
         };
 
+        window.loadRooms = loadRooms;
         loadRooms();
     </script>
 </body>
