@@ -96,7 +96,7 @@
             <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                 <h2 class="text-lg font-bold text-slate-400">📋 רשימת חדרים קיימת</h2>
                 <div class="relative w-full md:w-1/2">
-                    <input type="text" id="search-input" placeholder="חיפוש לפי שם או עיר..." class="w-full bg-slate-800/50 border border-slate-700 p-2 pr-10 rounded-xl outline-none focus:border-blue-500 text-sm text-white">
+                    <input type="text" id="search-input" placeholder="חיפוש מהיר ב-DB לפי שם..." class="w-full bg-slate-800/50 border border-slate-700 p-2 pr-10 rounded-xl outline-none focus:border-blue-500 text-sm text-white text-right">
                     <span class="absolute left-3 top-2.5 opacity-50">🔍</span>
                 </div>
             </div>
@@ -106,7 +106,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -122,13 +122,12 @@
         let roomsCache = [];
         const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=800";
 
-        // פונקציה חדשה לרינדור הרשימה (מציירת את מה שקיבלה)
         function renderRooms(roomsToRender) {
             const list = document.getElementById('admin-rooms-list');
             list.innerHTML = '';
             
             if (roomsToRender.length === 0) {
-                list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">לא נמצאו חדרים תואמים...</div>';
+                list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">לא נמצאו תוצאות בחיפוש...</div>';
                 return;
             }
 
@@ -155,24 +154,47 @@
             const list = document.getElementById('admin-rooms-list');
             list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">טוען נתונים...</div>';
             
-            const querySnapshot = await getDocs(collection(db, "rooms"));
-            roomsCache = [];
-
-            querySnapshot.forEach((roomDoc) => {
-                roomsCache.push({ id: roomDoc.id, ...roomDoc.data() });
-            });
-            
-            renderRooms(roomsCache);
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                roomsCache = [];
+                querySnapshot.forEach((roomDoc) => {
+                    roomsCache.push({ id: roomDoc.id, ...roomDoc.data() });
+                });
+                renderRooms(roomsCache);
+            } catch (err) {
+                list.innerHTML = '<div class="text-center py-4 text-red-500">שגיאה בטעינת נתונים</div>';
+            }
         }
 
-        // האזנה לחיפוש בשדה הקלט
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase().trim();
-            const filteredRooms = roomsCache.filter(room => 
-                room.name.toLowerCase().includes(searchTerm) || 
-                room.location.toLowerCase().includes(searchTerm)
-            );
-            renderRooms(filteredRooms);
+        // חיפוש ישיר מול ה-DB
+        document.getElementById('search-input').addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.trim();
+            const list = document.getElementById('admin-rooms-list');
+
+            if (searchTerm === "") {
+                loadAdminRooms();
+                return;
+            }
+
+            try {
+                // שאילתת טקסט ישירה ל-Firestore
+                const q = query(
+                    collection(db, "rooms"),
+                    orderBy("name"),
+                    startAt(searchTerm),
+                    endAt(searchTerm + '\uf8ff')
+                );
+
+                const querySnapshot = await getDocs(q);
+                let results = [];
+                querySnapshot.forEach((doc) => {
+                    results.push({ id: doc.id, ...doc.data() });
+                });
+                renderRooms(results);
+            } catch (error) {
+                console.error("Search Error:", error);
+                // הערה: אם מופיעה שגיאת Index, יש ללחוץ על הלינק ב-Console של הדפדפן
+            }
         });
 
         window.startEdit = (id) => {
