@@ -41,7 +41,7 @@
                         <option value="נתניה">נתניה</option><option value="באר שבע">באר שבע</option>
                         <option value="אילת">אילת</option><option value="בת ים">בת ים</option>
                         <option value="הרצליה">הרצליה</option><option value="בית שמש">בית שמש</option>
-                          <option value="נס ציונה">נס ציונה</option>
+                        <option value="נס ציונה">נס ציונה</option>
                     </select>
                 </div>
 
@@ -93,7 +93,13 @@
         </section>
 
         <section>
-            <h2 class="text-lg font-bold mb-4 text-slate-400">📋 רשימת חדרים קיימת</h2>
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h2 class="text-lg font-bold text-slate-400">📋 רשימת חדרים קיימת</h2>
+                <div class="relative w-full md:w-1/2">
+                    <input type="text" id="search-input" placeholder="חיפוש לפי שם או עיר..." class="w-full bg-slate-800/50 border border-slate-700 p-2 pr-10 rounded-xl outline-none focus:border-blue-500 text-sm text-white">
+                    <span class="absolute left-3 top-2.5 opacity-50">🔍</span>
+                </div>
+            </div>
             <div id="admin-rooms-list" class="space-y-3"></div>
         </section>
     </div>
@@ -116,19 +122,18 @@
         let roomsCache = [];
         const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=800";
 
-        async function loadAdminRooms() {
+        // פונקציה חדשה לרינדור הרשימה (מציירת את מה שקיבלה)
+        function renderRooms(roomsToRender) {
             const list = document.getElementById('admin-rooms-list');
-            list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">טוען נתונים...</div>';
-            const querySnapshot = await getDocs(collection(db, "rooms"));
             list.innerHTML = '';
-            roomsCache = [];
+            
+            if (roomsToRender.length === 0) {
+                list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">לא נמצאו חדרים תואמים...</div>';
+                return;
+            }
 
-            querySnapshot.forEach((roomDoc) => {
-                const data = roomDoc.data();
-                roomsCache.push({ id: roomDoc.id, ...data });
-                
+            roomsToRender.forEach((data) => {
                 const closedClass = data.isClosed ? 'closed-room' : 'border-blue-500';
-                
                 list.innerHTML += `
                     <div class="glass p-4 rounded-2xl flex justify-between items-center border-r-4 ${closedClass} animate-fade-in relative overflow-hidden">
                         <div>
@@ -138,13 +143,37 @@
                             <p class="text-[10px] text-slate-500">${data.location} | ⭐ ${data.rating}/10</p>
                         </div>
                         <div class="flex gap-2 relative z-10">
-                            <button onclick="startEdit('${roomDoc.id}')" class="bg-blue-900/30 text-blue-400 p-2 rounded-lg hover:bg-blue-900/50 text-xs transition">ערוך</button>
-                            <button onclick="deleteRoom('${roomDoc.id}')" class="bg-red-900/30 text-red-400 p-2 rounded-lg hover:bg-red-900/50 text-xs transition">מחק</button>
+                            <button onclick="startEdit('${data.id}')" class="bg-blue-900/30 text-blue-400 p-2 rounded-lg hover:bg-blue-900/50 text-xs transition">ערוך</button>
+                            <button onclick="deleteRoom('${data.id}')" class="bg-red-900/30 text-red-400 p-2 rounded-lg hover:bg-red-900/50 text-xs transition">מחק</button>
                         </div>
                     </div>
                 `;
             });
         }
+
+        async function loadAdminRooms() {
+            const list = document.getElementById('admin-rooms-list');
+            list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">טוען נתונים...</div>';
+            
+            const querySnapshot = await getDocs(collection(db, "rooms"));
+            roomsCache = [];
+
+            querySnapshot.forEach((roomDoc) => {
+                roomsCache.push({ id: roomDoc.id, ...roomDoc.data() });
+            });
+            
+            renderRooms(roomsCache);
+        }
+
+        // האזנה לחיפוש בשדה הקלט
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const filteredRooms = roomsCache.filter(room => 
+                room.name.toLowerCase().includes(searchTerm) || 
+                room.location.toLowerCase().includes(searchTerm)
+            );
+            renderRooms(filteredRooms);
+        });
 
         window.startEdit = (id) => {
             const room = roomsCache.find(r => r.id === id);
