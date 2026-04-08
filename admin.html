@@ -106,7 +106,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, deleteDoc, doc, updateDoc, query, orderBy, startAt, endAt } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -119,12 +119,13 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        let roomsCache = [];
+        let currentList = []; // נשתמש בזה כדי לשמור את מה שמוצג כרגע
         const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=800";
 
         function renderRooms(roomsToRender) {
             const list = document.getElementById('admin-rooms-list');
             list.innerHTML = '';
+            currentList = roomsToRender;
             
             if (roomsToRender.length === 0) {
                 list.innerHTML = '<div class="text-center py-4 text-slate-600 italic text-sm">לא נמצאו תוצאות בחיפוש...</div>';
@@ -156,28 +157,24 @@
             
             try {
                 const querySnapshot = await getDocs(collection(db, "rooms"));
-                roomsCache = [];
+                const rooms = [];
                 querySnapshot.forEach((roomDoc) => {
-                    roomsCache.push({ id: roomDoc.id, ...roomDoc.data() });
+                    rooms.push({ id: roomDoc.id, ...roomDoc.data() });
                 });
-                renderRooms(roomsCache);
+                renderRooms(rooms);
             } catch (err) {
                 list.innerHTML = '<div class="text-center py-4 text-red-500">שגיאה בטעינת נתונים</div>';
             }
         }
 
-        // חיפוש ישיר מול ה-DB
         document.getElementById('search-input').addEventListener('input', async (e) => {
             const searchTerm = e.target.value.trim();
-            const list = document.getElementById('admin-rooms-list');
-
             if (searchTerm === "") {
                 loadAdminRooms();
                 return;
             }
 
             try {
-                // שאילתת טקסט ישירה ל-Firestore
                 const q = query(
                     collection(db, "rooms"),
                     orderBy("name"),
@@ -193,13 +190,24 @@
                 renderRooms(results);
             } catch (error) {
                 console.error("Search Error:", error);
-                // הערה: אם מופיעה שגיאת Index, יש ללחוץ על הלינק ב-Console של הדפדפן
             }
         });
 
-        window.startEdit = (id) => {
-            const room = roomsCache.find(r => r.id === id);
-            if (!room) return;
+        // תיקון פונקציית העריכה - חיפוש בזיכרון או הבאה מה-DB
+        window.startEdit = async (id) => {
+            let room = currentList.find(r => r.id === id);
+            
+            // אם החדר לא ברשימה המוצגת כרגע, נביא אותו מה-DB
+            if (!room) {
+                const docRef = doc(db, "rooms", id);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    room = { id: docSnap.id, ...docSnap.data() };
+                } else {
+                    alert("החדר לא נמצא");
+                    return;
+                }
+            }
 
             document.getElementById('edit-id').value = room.id;
             document.getElementById('name').value = room.name;
@@ -213,7 +221,7 @@
             document.getElementById('isClosed').checked = room.isClosed || false;
 
             document.getElementById('form-title').innerText = "✏️ עריכת חדר קיים";
-            document.getElementById('form-title').classList.replace('text-blue-400', 'text-yellow-500');
+            document.getElementById('form-title').style.color = "#eab308";
             document.getElementById('submit-btn').innerText = "עדכן שינויים ✅";
             document.getElementById('submit-btn').classList.replace('bg-blue-600', 'bg-yellow-600');
             document.getElementById('form-container').classList.add('edit-mode');
@@ -225,7 +233,7 @@
             document.getElementById('room-form').reset();
             document.getElementById('edit-id').value = "";
             document.getElementById('form-title').innerText = "✨ הוספת חדר חדש";
-            document.getElementById('form-title').classList.replace('text-yellow-500', 'text-blue-400');
+            document.getElementById('form-title').style.color = "#60a5fa";
             document.getElementById('submit-btn').innerText = "הוסף חדר למערכת 🚀";
             document.getElementById('submit-btn').classList.replace('bg-yellow-600', 'bg-blue-600');
             document.getElementById('form-container').classList.remove('edit-mode');
@@ -267,7 +275,7 @@
             }
         };
 
-        window.loadAdminRooms = loadAdminRooms;
+        // טעינה ראשונית
         loadAdminRooms();
     </script>
 </body>
