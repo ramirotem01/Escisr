@@ -135,7 +135,7 @@
         let loadedSoFar = 0;
         const batchSize = 12;
         let debounceTimer;
-
+        window.loadRooms = loadRooms;
         async function loadRooms(isNextPage = false) {
             if (isLoading) return;
             isLoading = true;
