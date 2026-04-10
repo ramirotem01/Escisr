@@ -38,6 +38,9 @@
             
             <div id="tags-container" class="mt-4 flex flex-wrap gap-2">
                 </div>
+            <p id="room-description" class="mt-6 text-slate-300 leading-relaxed text-sm border-r-2 border-blue-500/50 pr-4 italic">
+    טוען תיאור...
+</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -131,6 +134,7 @@
                 document.getElementById('room-location').innerText = `📍 ${room.location}`;
                 document.getElementById('room-rating').innerText = room.rating.toFixed(1);
                 document.getElementById('room-image').src = room.image || 'https://via.placeholder.com/800x400';
+                document.getElementById('room-description').innerText = room.description || "אין תיאור זמין לחדר זה.";
                 
                 // תגיות
                 const tags = document.getElementById('tags-container');
