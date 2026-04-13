@@ -3,7 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>השוואת חדרים | EscapeRooms</title>
+    
+    <title>השוואת חדרי בריחה | השוואה ראש בראש | EscapeRooms</title>
+    <meta name="description" content="הכלי המתקדם ביותר להשוואת חדרי בריחה בישראל. השוו בין רמת פחד, טכנולוגיה, קושי ודירוגי גולשים כדי למצוא את החדר המושלם עבורכם.">
+    <meta name="keywords" content="השוואת חדרי בריחה, אסקייפ רום השוואה, חדר בריחה מומלץ, השוואת מחירים חדרי בריחה, דירוג חדרי בריחה">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://ramirotem01.github.io/Escisr/compare.html">
+
+    <meta property="og:title" content="השוואת חדרי בריחה - איזה חדר מנצח?">
+    <meta property="og:description" content="כלי השוואה אינטראקטיבי לחדרי בריחה. אל תזמינו חדר לפני שבדקתם את הנתונים!">
+    <meta property="og:url" content="https://ramirotem01.github.io/Escisr/compare.html">
+    <meta property="og:type" content="website">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "EscapeRooms Comparison Tool",
+      "url": "https://ramirotem01.github.io/Escisr/compare.html",
+      "operatingSystem": "All",
+      "applicationCategory": "EntertainmentApplication",
+      "description": "כלי להשוואה בין חדרי בריחה בישראל לפי רמת פחד, קושי וטכנולוגיה."
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,40 +34,47 @@
         body { background-color: #020617; color: white; font-family: 'Heebo', sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; max-height: 200px; overflow-y: auto; }
+        .highlight-text { background: linear-gradient(to left, #3b82f6, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
 <body class="pb-24">
 
     <header class="p-6 text-center border-b border-slate-800 bg-slate-900/90 sticky top-0 z-50">
-        <h1 class="text-xl font-bold text-blue-400 italic">השוואה ראש בראש ⚔️</h1>
+        <h1 class="text-2xl font-black italic highlight-text">השוואת חדרי בריחה ⚔️</h1>
+        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">מערכת ניתוח נתונים Escisr</p>
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-8">
         
+        <section class="text-center mb-10">
+            <h2 class="text-lg font-bold text-slate-300">איזה אתגר מתאים לכם יותר?</h2>
+            <p class="text-sm text-slate-500 max-w-md mx-auto">חפשו ובחרו שני חדרי בריחה מהמאגר כדי לראות השוואה ויזואלית של כל הפרמטרים.</p>
+        </section>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             <div class="relative group">
-                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold tracking-widest">חפש חדר א' (כחול)</label>
-                <input type="text" id="input-1" placeholder="הקלד שם..." 
+                <label for="input-1" class="text-[10px] uppercase text-slate-500 mr-2 font-bold tracking-widest">בחרו חדר א' להשוואה</label>
+                <input type="text" id="input-1" placeholder="הקלידו שם של חדר..." 
                     class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 mt-2 outline-none focus:border-blue-500 transition-all text-white">
                 <div id="results-1" class="search-results hidden glass rounded-xl mt-2 overflow-hidden shadow-2xl"></div>
-                <div id="selected-name-1" class="hidden mt-2 text-blue-400 font-bold text-sm bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 flex justify-between">
-                    <span></span> <button onclick="clearSelection(1)" class="text-slate-400">✕</button>
+                <div id="selected-name-1" class="hidden mt-2 text-blue-400 font-bold text-sm bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 flex justify-between items-center">
+                    <span></span> <button onclick="clearSelection(1)" class="text-slate-400 hover:text-white px-2">✕</button>
                 </div>
             </div>
 
             <div class="relative group">
-                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold tracking-widest">חפש חדר ב' (סגול)</label>
-                <input type="text" id="input-2" placeholder="הקלד שם..." 
+                <label for="input-2" class="text-[10px] uppercase text-slate-500 mr-2 font-bold tracking-widest">בחרו חדר ב' להשוואה</label>
+                <input type="text" id="input-2" placeholder="הקלידו שם של חדר..." 
                     class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 mt-2 outline-none focus:border-purple-500 transition-all text-white">
                 <div id="results-2" class="search-results hidden glass rounded-xl mt-2 overflow-hidden shadow-2xl"></div>
-                <div id="selected-name-2" class="hidden mt-2 text-purple-400 font-bold text-sm bg-purple-500/10 p-2 rounded-lg border border-purple-500/20 flex justify-between">
-                    <span></span> <button onclick="clearSelection(2)" class="text-slate-400">✕</button>
+                <div id="selected-name-2" class="hidden mt-2 text-purple-400 font-bold text-sm bg-purple-500/10 p-2 rounded-lg border border-purple-500/20 flex justify-between items-center">
+                    <span></span> <button onclick="clearSelection(2)" class="text-slate-400 hover:text-white px-2">✕</button>
                 </div>
             </div>
         </div>
 
         <div id="chart-section" class="glass p-6 rounded-[2.5rem] mb-8 hidden">
-            <h3 class="text-center text-[10px] text-slate-500 uppercase tracking-widest mb-6 font-black">ניתוח עוצמות</h3>
+            <h3 class="text-center text-[10px] text-slate-500 uppercase tracking-widest mb-6 font-black">ניתוח פרמטרים</h3>
             <div class="h-80 w-full">
                 <canvas id="compareChart"></canvas>
             </div>
@@ -54,13 +84,13 @@
             <table class="w-full text-right border-collapse">
                 <thead class="bg-slate-800/80">
                     <tr class="text-[10px] text-slate-500 uppercase">
-                        <th class="p-5 font-bold">פרמטר</th>
+                        <th class="p-5 font-bold">מדד</th>
                         <th id="table-name-1" class="p-5 text-blue-400 font-black">-</th>
                         <th id="table-name-2" class="p-5 text-purple-400 font-black">-</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5 text-sm">
-                    <tr><td class="p-5 text-slate-400">⭐ דירוג</td><td id="rate-1" class="p-5 font-bold"></td><td id="rate-2" class="p-5 font-bold"></td></tr>
+                    <tr><td class="p-5 text-slate-400">⭐ ציון ממוצע</td><td id="rate-1" class="p-5 font-bold"></td><td id="rate-2" class="p-5 font-bold"></td></tr>
                     <tr><td class="p-5 text-slate-400">📍 מיקום</td><td id="loc-1" class="p-5"></td><td id="loc-2" class="p-5"></td></tr>
                     <tr><td class="p-5 text-slate-400">👼 לילדים</td><td id="kids-1" class="p-5 text-center"></td><td id="kids-2" class="p-5 text-center"></td></tr>
                 </tbody>
@@ -69,7 +99,7 @@
 
         <div id="placeholder" class="text-center py-20 opacity-30">
             <div class="text-6xl mb-4">⚖️</div>
-            <p class="font-bold tracking-tighter">חפש ובחר שני חדרים להשוואה</p>
+            <p class="font-bold tracking-tighter">המערכת ממתינה לבחירת שני חדרים להשוואה</p>
         </div>
 
     </main>
@@ -82,7 +112,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { initializeFirestore, collection, getDocs, query, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -99,7 +129,6 @@
         let roomData1 = null, roomData2 = null;
         let myChart = null;
 
-        // מנוע חיפוש לשני השדות
         async function searchRooms(inputNum, text) {
             const resultsDiv = document.getElementById(`results-${inputNum}`);
             if (text.length < 2) {
@@ -125,10 +154,8 @@
                              </div>`;
                 });
 
-                if (html) {
-                    resultsDiv.innerHTML = html;
-                    resultsDiv.classList.remove('hidden');
-                }
+                resultsDiv.innerHTML = html;
+                resultsDiv.classList.toggle('hidden', !html);
             } catch (e) { console.error(e); }
         }
 
@@ -154,8 +181,9 @@
 
         window.clearSelection = (num) => {
             if (num === 1) roomData1 = null; else roomData2 = null;
-            document.getElementById(`input-${num}`).value = '';
-            document.getElementById(`input-${num}`).classList.remove('hidden');
+            const input = document.getElementById(`input-${num}`);
+            input.value = '';
+            input.classList.remove('hidden');
             document.getElementById(`selected-name-${num}`).classList.add('hidden');
             checkReset();
         };
@@ -173,7 +201,6 @@
             document.getElementById('chart-section').classList.remove('hidden');
             document.getElementById('table-section').classList.remove('hidden');
 
-            // עדכון טבלה
             document.getElementById('table-name-1').innerText = roomData1.name;
             document.getElementById('table-name-2').innerText = roomData2.name;
             document.getElementById('rate-1').innerText = `⭐ ${(roomData1.rating || 0).toFixed(1)}`;
@@ -183,7 +210,6 @@
             document.getElementById('kids-1').innerText = roomData1.kidFriendly ? '✅' : '❌';
             document.getElementById('kids-2').innerText = roomData2.kidFriendly ? '✅' : '❌';
 
-            // עדכון גרף
             const ctx = document.getElementById('compareChart').getContext('2d');
             if (myChart) myChart.destroy();
             myChart = new Chart(ctx, {
@@ -191,18 +217,17 @@
                 data: {
                     labels: ['פחד', 'טכנולוגיה', 'קושי', 'תפאורה', 'סיפור'],
                     datasets: [
-                        { label: roomData1.name, data: [roomData1.scaryLevel||0, roomData1.techLevel||0, roomData1.difficulty||5, roomData1.design||5, roomData1.story||5], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.2)', pointBackgroundColor: '#3b82f6' },
-                        { label: roomData2.name, data: [roomData2.scaryLevel||0, roomData2.techLevel||0, roomData2.difficulty||5, roomData2.design||5, roomData2.story||5], borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.2)', pointBackgroundColor: '#a855f7' }
+                        { label: roomData1.name, data: [roomData1.scaryLevel||0, roomData1.techLevel||0, roomData1.difficulty||5, roomData1.design||5, roomData1.story||5], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', pointBackgroundColor: '#3b82f6' },
+                        { label: roomData2.name, data: [roomData2.scaryLevel||0, roomData2.techLevel||0, roomData2.difficulty||5, roomData2.design||5, roomData2.story||5], borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', pointBackgroundColor: '#a855f7' }
                     ]
                 },
                 options: {
-                    scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, angleLines: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: '#64748b' }, ticks: { display: false }, min: 0, max: 10 } },
+                    scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, angleLines: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: '#64748b', font: { family: 'Heebo' } }, ticks: { display: false }, min: 0, max: 10 } },
                     plugins: { legend: { labels: { color: '#fff', font: { family: 'Heebo' } } } }
                 }
             });
         }
 
-        // Event Listeners לחיפוש
         document.getElementById('input-1').addEventListener('input', (e) => searchRooms(1, e.target.value));
         document.getElementById('input-2').addEventListener('input', (e) => searchRooms(2, e.target.value));
     </script>
