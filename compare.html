@@ -6,88 +6,83 @@
     <title>השוואת חדרים | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: left 0.7rem top 50%; }
-        .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { background-color: #020617; color: white; font-family: 'Heebo', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; max-height: 200px; overflow-y: auto; }
     </style>
 </head>
 <body class="pb-24">
 
-    <header class="p-6 text-center border-b border-slate-800 bg-slate-900 sticky top-0 z-50">
+    <header class="p-6 text-center border-b border-slate-800 bg-slate-900/90 sticky top-0 z-50">
         <h1 class="text-xl font-bold text-blue-400 italic">השוואה ראש בראש ⚔️</h1>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 mt-6">
+    <main class="max-w-4xl mx-auto px-4 mt-8">
         
-        <div class="grid grid-cols-2 gap-4 mb-8">
-            <div class="space-y-2">
-                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold">חדר א' (כחול)</label>
-                <select id="select-1" onchange="runComparison()" class="w-full bg-blue-900/20 border border-blue-500/30 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">טוען רשימה...</option>
-                </select>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            <div class="relative group">
+                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold tracking-widest">חפש חדר א' (כחול)</label>
+                <input type="text" id="input-1" placeholder="הקלד שם..." 
+                    class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 mt-2 outline-none focus:border-blue-500 transition-all text-white">
+                <div id="results-1" class="search-results hidden glass rounded-xl mt-2 overflow-hidden shadow-2xl"></div>
+                <div id="selected-name-1" class="hidden mt-2 text-blue-400 font-bold text-sm bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 flex justify-between">
+                    <span></span> <button onclick="clearSelection(1)" class="text-slate-400">✕</button>
+                </div>
             </div>
-            <div class="space-y-2">
-                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold">חדר ב' (סגול)</label>
-                <select id="select-2" onchange="runComparison()" class="w-full bg-purple-900/20 border border-purple-500/30 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-purple-500">
-                    <option value="">טוען רשימה...</option>
-                </select>
+
+            <div class="relative group">
+                <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold tracking-widest">חפש חדר ב' (סגול)</label>
+                <input type="text" id="input-2" placeholder="הקלד שם..." 
+                    class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 mt-2 outline-none focus:border-purple-500 transition-all text-white">
+                <div id="results-2" class="search-results hidden glass rounded-xl mt-2 overflow-hidden shadow-2xl"></div>
+                <div id="selected-name-2" class="hidden mt-2 text-purple-400 font-bold text-sm bg-purple-500/10 p-2 rounded-lg border border-purple-500/20 flex justify-between">
+                    <span></span> <button onclick="clearSelection(2)" class="text-slate-400">✕</button>
+                </div>
             </div>
         </div>
 
-        <div id="loading-indicator" class="hidden flex flex-col items-center justify-center py-10">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-12 w-12 mb-4"></div>
-            <p class="text-blue-400 animate-pulse">מושך נתוני השוואה...</p>
-        </div>
-
-        <div id="chart-section" class="glass p-6 rounded-3xl mb-8 hidden">
-            <h3 class="text-center text-xs text-slate-400 uppercase mb-4">ניתוח עוצמות</h3>
+        <div id="chart-section" class="glass p-6 rounded-[2.5rem] mb-8 hidden">
+            <h3 class="text-center text-[10px] text-slate-500 uppercase tracking-widest mb-6 font-black">ניתוח עוצמות</h3>
             <div class="h-80 w-full">
                 <canvas id="compareChart"></canvas>
             </div>
         </div>
 
-        <div id="table-section" class="glass rounded-3xl overflow-hidden hidden">
-            <table class="w-full text-right">
+        <div id="table-section" class="glass rounded-[2rem] overflow-hidden hidden shadow-2xl">
+            <table class="w-full text-right border-collapse">
                 <thead class="bg-slate-800/80">
-                    <tr class="text-xs text-slate-400 uppercase">
-                        <th class="p-4 font-medium">פרמטר</th>
-                        <th id="name-1" class="p-4 text-blue-400 font-bold">-</th>
-                        <th id="name-2" class="p-4 text-purple-400 font-bold">-</th>
+                    <tr class="text-[10px] text-slate-500 uppercase">
+                        <th class="p-5 font-bold">פרמטר</th>
+                        <th id="table-name-1" class="p-5 text-blue-400 font-black">-</th>
+                        <th id="table-name-2" class="p-5 text-purple-400 font-black">-</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800 text-sm">
-                    <tr>
-                        <td class="p-4 text-slate-400">דירוג קהל</td>
-                        <td id="rate-1" class="p-4 font-bold"></td>
-                        <td id="rate-2" class="p-4 font-bold"></td>
-                    </tr>
-                    <tr>
-                        <td class="p-4 text-slate-400">מיקום</td>
-                        <td id="loc-1" class="p-4"></td>
-                        <td id="loc-2" class="p-4"></td>
-                    </tr>
-                    <tr>
-                        <td class="p-4 text-slate-400">מתאים לילדים?</td>
-                        <td id="kids-1" class="p-4 text-lg text-center"></td>
-                        <td id="kids-2" class="p-4 text-lg text-center"></td>
-                    </tr>
+                <tbody class="divide-y divide-white/5 text-sm">
+                    <tr><td class="p-5 text-slate-400">⭐ דירוג</td><td id="rate-1" class="p-5 font-bold"></td><td id="rate-2" class="p-5 font-bold"></td></tr>
+                    <tr><td class="p-5 text-slate-400">📍 מיקום</td><td id="loc-1" class="p-5"></td><td id="loc-2" class="p-5"></td></tr>
+                    <tr><td class="p-5 text-slate-400">👼 לילדים</td><td id="kids-1" class="p-5 text-center"></td><td id="kids-2" class="p-5 text-center"></td></tr>
                 </tbody>
             </table>
         </div>
 
-        <div id="placeholder" class="text-center py-32 text-slate-600">
-            <div class="text-6xl mb-6 opacity-20">⚖️</div>
-            <p>בחר שני חדרים מהרשימה כדי לראות השוואה</p>
+        <div id="placeholder" class="text-center py-20 opacity-30">
+            <div class="text-6xl mb-4">⚖️</div>
+            <p class="font-bold tracking-tighter">חפש ובחר שני חדרים להשוואה</p>
         </div>
 
     </main>
 
+    <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-white/5 p-3 flex justify-around items-center z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-500"><span>🏠</span><span class="text-[10px] font-bold">ראשי</span></a>
+        <a href="compare.html" class="flex flex-col items-center gap-1 text-blue-400"><span>⚖️</span><span class="text-[10px] font-bold">השוואה</span></a>
+        <a href="add-review.html" class="flex flex-col items-center gap-1 text-slate-500"><span>✍️</span><span class="text-[10px] font-bold">דירוג</span></a>
+    </nav>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { initializeFirestore, collection, getDocs, getDoc, doc, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeFirestore, collection, getDocs, query, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -99,134 +94,117 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        
-        // פתרון לבעיות חיבור: שימוש ב-Long Polling וזיכרון מטמון מקומי
-        const db = initializeFirestore(app, {
-            localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-            experimentalForceLongPolling: true 
-        });
+        const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
+        let roomData1 = null, roomData2 = null;
         let myChart = null;
 
-        async function initComparison() {
-            const select1 = document.getElementById('select-1');
-            const select2 = document.getElementById('select-2');
-            
+        // מנוע חיפוש לשני השדות
+        async function searchRooms(inputNum, text) {
+            const resultsDiv = document.getElementById(`results-${inputNum}`);
+            if (text.length < 2) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
             try {
-                const querySnapshot = await getDocs(collection(db, "rooms"));
-                let optionsHtml = '<option value="">בחר חדר...</option>';
+                const q = query(
+                    collection(db, "rooms"),
+                    where("name", ">=", text),
+                    where("name", "<=", text + '\uf8ff'),
+                    limit(5)
+                );
                 
-                querySnapshot.forEach((doc) => {
-                    const room = doc.data();
-                    optionsHtml += `<option value="${doc.id}">${room.name || 'חדר ללא שם'}</option>`;
+                const snap = await getDocs(q);
+                let html = '';
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    html += `<div class="p-3 hover:bg-slate-700/50 cursor-pointer border-b border-white/5 text-sm" 
+                                onclick="selectRoom(${inputNum}, '${doc.id}', '${data.name.replace(/'/g, "\\'")}')">
+                                ${data.name} <span class="text-[10px] text-slate-500">| ${data.location}</span>
+                             </div>`;
                 });
 
-                select1.innerHTML = optionsHtml;
-                select2.innerHTML = optionsHtml;
-            } catch (err) {
-                console.error("Error loading names:", err);
-                const errorMsg = '<option value="">שגיאה בטעינה</option>';
-                select1.innerHTML = errorMsg;
-                select2.innerHTML = errorMsg;
-            }
+                if (html) {
+                    resultsDiv.innerHTML = html;
+                    resultsDiv.classList.remove('hidden');
+                }
+            } catch (e) { console.error(e); }
         }
 
-        window.runComparison = async () => {
-            const id1 = document.getElementById('select-1').value;
-            const id2 = document.getElementById('select-2').value;
+        window.selectRoom = async (inputNum, id, name) => {
+            document.getElementById(`results-${inputNum}`).classList.add('hidden');
+            document.getElementById(`input-${inputNum}`).classList.add('hidden');
             
-            if (!id1 || !id2) return;
-
-            document.getElementById('loading-indicator').classList.remove('hidden');
-            document.getElementById('chart-section').classList.add('hidden');
-            document.getElementById('table-section').classList.add('hidden');
-            document.getElementById('placeholder').classList.add('hidden');
+            const selectedDiv = document.getElementById(`selected-name-${inputNum}`);
+            selectedDiv.querySelector('span').innerText = name;
+            selectedDiv.classList.remove('hidden');
 
             try {
-                // משיכה ממוקדת של 2 חדרים בלבד
-                const [snap1, snap2] = await Promise.all([
-                    getDoc(doc(db, "rooms", id1)),
-                    getDoc(doc(db, "rooms", id2))
-                ]);
+                const q = query(collection(db, "rooms"), where("__name__", "==", id));
+                const snap = await getDocs(q);
+                const data = snap.docs[0].data();
+                
+                if (inputNum === 1) roomData1 = data;
+                else roomData2 = data;
 
-                if (snap1.exists() && snap2.exists()) {
-                    const r1 = { id: snap1.id, ...snap1.data() };
-                    const r2 = { id: snap2.id, ...snap2.data() };
-
-                    updateTable(r1, r2);
-                    updateChart(r1, r2);
-
-                    document.getElementById('loading-indicator').classList.add('hidden');
-                    document.getElementById('chart-section').classList.remove('hidden');
-                    document.getElementById('table-section').classList.remove('hidden');
-                }
-            } catch (err) {
-                console.error("Fetch error:", err);
-                alert("חלה שגיאה במשיכת נתוני החדרים. נסה שוב.");
-                document.getElementById('loading-indicator').classList.add('hidden');
-                document.getElementById('placeholder').classList.remove('hidden');
-            }
+                if (roomData1 && roomData2) renderComparison();
+            } catch (e) { console.error(e); }
         };
 
-        function updateTable(r1, r2) {
-            document.getElementById('name-1').innerText = r1.name || '-';
-            document.getElementById('name-2').innerText = r2.name || '-';
-            document.getElementById('rate-1').innerText = `⭐ ${(r1.rating || 0).toFixed(1)}`;
-            document.getElementById('rate-2').innerText = `⭐ ${(r2.rating || 0).toFixed(1)}`;
-            document.getElementById('loc-1').innerText = r1.location || 'לא צוין';
-            document.getElementById('loc-2').innerText = r2.location || 'לא צוין';
-            document.getElementById('kids-1').innerText = r1.kidFriendly ? '✅' : '❌';
-            document.getElementById('kids-2').innerText = r2.kidFriendly ? '✅' : '❌';
+        window.clearSelection = (num) => {
+            if (num === 1) roomData1 = null; else roomData2 = null;
+            document.getElementById(`input-${num}`).value = '';
+            document.getElementById(`input-${num}`).classList.remove('hidden');
+            document.getElementById(`selected-name-${num}`).classList.add('hidden');
+            checkReset();
+        };
+
+        function checkReset() {
+            if (!roomData1 || !roomData2) {
+                document.getElementById('chart-section').classList.add('hidden');
+                document.getElementById('table-section').classList.add('hidden');
+                document.getElementById('placeholder').classList.remove('hidden');
+            }
         }
 
-        function updateChart(r1, r2) {
+        function renderComparison() {
+            document.getElementById('placeholder').classList.add('hidden');
+            document.getElementById('chart-section').classList.remove('hidden');
+            document.getElementById('table-section').classList.remove('hidden');
+
+            // עדכון טבלה
+            document.getElementById('table-name-1').innerText = roomData1.name;
+            document.getElementById('table-name-2').innerText = roomData2.name;
+            document.getElementById('rate-1').innerText = `⭐ ${(roomData1.rating || 0).toFixed(1)}`;
+            document.getElementById('rate-2').innerText = `⭐ ${(roomData2.rating || 0).toFixed(1)}`;
+            document.getElementById('loc-1').innerText = roomData1.location;
+            document.getElementById('loc-2').innerText = roomData2.location;
+            document.getElementById('kids-1').innerText = roomData1.kidFriendly ? '✅' : '❌';
+            document.getElementById('kids-2').innerText = roomData2.kidFriendly ? '✅' : '❌';
+
+            // עדכון גרף
             const ctx = document.getElementById('compareChart').getContext('2d');
             if (myChart) myChart.destroy();
-
             myChart = new Chart(ctx, {
                 type: 'radar',
                 data: {
                     labels: ['פחד', 'טכנולוגיה', 'קושי', 'תפאורה', 'סיפור'],
                     datasets: [
-                        {
-                            label: r1.name,
-                            data: [r1.scaryLevel || 0, r1.techLevel || 0, r1.difficulty || 5, r1.design || 5, r1.story || 5],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                            pointBackgroundColor: '#3b82f6',
-                            borderWidth: 2
-                        },
-                        {
-                            label: r2.name,
-                            data: [r2.scaryLevel || 0, r2.techLevel || 0, r2.difficulty || 5, r2.design || 5, r2.story || 5],
-                            borderColor: '#a855f7',
-                            backgroundColor: 'rgba(168, 85, 247, 0.2)',
-                            pointBackgroundColor: '#a855f7',
-                            borderWidth: 2
-                        }
+                        { label: roomData1.name, data: [roomData1.scaryLevel||0, roomData1.techLevel||0, roomData1.difficulty||5, roomData1.design||5, roomData1.story||5], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.2)', pointBackgroundColor: '#3b82f6' },
+                        { label: roomData2.name, data: [roomData2.scaryLevel||0, roomData2.techLevel||0, roomData2.difficulty||5, roomData2.design||5, roomData2.story||5], borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.2)', pointBackgroundColor: '#a855f7' }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(255,255,255,0.1)' },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            pointLabels: { color: '#94a3b8', font: { size: 12 } },
-                            ticks: { display: false, stepSize: 2 },
-                            suggestedMin: 0, suggestedMax: 10
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'top', labels: { color: '#fff', padding: 20 } }
-                    }
+                    scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, angleLines: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: '#64748b' }, ticks: { display: false }, min: 0, max: 10 } },
+                    plugins: { legend: { labels: { color: '#fff', font: { family: 'Heebo' } } } }
                 }
             });
         }
 
-        // הפעלה ראשונית
-        initComparison();
+        // Event Listeners לחיפוש
+        document.getElementById('input-1').addEventListener('input', (e) => searchRooms(1, e.target.value));
+        document.getElementById('input-2').addEventListener('input', (e) => searchRooms(2, e.target.value));
     </script>
 </body>
 </html>
