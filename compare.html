@@ -10,7 +10,6 @@
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: left 0.7rem top 50%; }
-        .compare-card { transition: all 0.3s ease; }
     </style>
 </head>
 <body class="pb-24">
@@ -25,18 +24,22 @@
             <div class="space-y-2">
                 <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold">חדר א' (כחול)</label>
                 <select id="select-1" onchange="runComparison()" class="w-full bg-blue-900/20 border border-blue-500/30 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">בחר חדר...</option>
+                    <option value="">טוען רשימה...</option>
                 </select>
             </div>
             <div class="space-y-2">
                 <label class="text-[10px] uppercase text-slate-500 mr-2 font-bold">חדר ב' (סגול)</label>
                 <select id="select-2" onchange="runComparison()" class="w-full bg-purple-900/20 border border-purple-500/30 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-purple-500">
-                    <option value="">בחר חדר...</option>
+                    <option value="">טוען רשימה...</option>
                 </select>
             </div>
         </div>
 
-        <div id="chart-section" class="glass p-6 rounded-3xl mb-8 hidden animate-fade-in">
+        <div id="loading-indicator" class="hidden text-center text-blue-400 py-4 animate-pulse">
+            מושך נתוני השוואה...
+        </div>
+
+        <div id="chart-section" class="glass p-6 rounded-3xl mb-8 hidden">
             <h3 class="text-center text-xs text-slate-400 uppercase mb-4">ניתוח עוצמות</h3>
             <div class="h-80 w-full">
                 <canvas id="compareChart"></canvas>
@@ -74,33 +77,14 @@
 
         <div id="placeholder" class="text-center py-32 text-slate-600">
             <div class="text-6xl mb-6 opacity-20">⚖️</div>
-            <p>בחר שני חדרים מהרשימה כדי לראות מי מהם מתאים לכם יותר</p>
+            <p>בחר שני חדרים מהרשימה כדי לראות השוואה</p>
         </div>
 
     </main>
 
-    <nav class="fixed bottom-0 left-0 w-full bg-slate-900 border-t border-slate-800 p-3 flex justify-around items-center z-50">
-        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
-            <span class="text-xl">🏠</span>
-            <span class="text-[10px]">ראשי</span>
-        </a>
-        <a href="compare.html" class="flex flex-col items-center gap-1 text-blue-400">
-            <span class="text-xl">⚖️</span>
-            <span class="text-[10px]">השוואה</span>
-        </a>
-        <a href="add-review.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
-            <span class="text-xl">✍️</span>
-            <span class="text-[10px]">דרג חדר</span>
-        </a>
-        <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
-            <span class="text-xl">🛂</span>
-            <span class="text-[10px]">הפרופיל</span>
-        </a>
-    </nav>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -114,53 +98,69 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let roomsData = [];
         let myChart = null;
 
-        // Fetch all rooms once for fast switching
+        // טעינת רשימת השמות בלבד - מהיר מאוד
         async function initComparison() {
             const select1 = document.getElementById('select-1');
             const select2 = document.getElementById('select-2');
             
             try {
                 const querySnapshot = await getDocs(collection(db, "rooms"));
+                let optionsHtml = '<option value="">בחר חדר...</option>';
+                
                 querySnapshot.forEach((doc) => {
-                    const room = { id: doc.id, ...doc.data() };
-                    roomsData.push(room);
-                    const option = `<option value="${room.id}">${room.name}</option>`;
-                    select1.innerHTML += option;
-                    select2.innerHTML += option;
+                    const room = doc.data();
+                    optionsHtml += `<option value="${doc.id}">${room.name}</option>`;
                 });
+
+                select1.innerHTML = optionsHtml;
+                select2.innerHTML = optionsHtml;
             } catch (err) {
-                console.error("Error loading rooms for comparison:", err);
+                console.error("Error loading names:", err);
             }
         }
 
-        window.runComparison = () => {
+        window.runComparison = async () => {
             const id1 = document.getElementById('select-1').value;
             const id2 = document.getElementById('select-2').value;
             
             if (!id1 || !id2) return;
 
-            const r1 = roomsData.find(r => r.id === id1);
-            const r2 = roomsData.find(r => r.id === id2);
-
-            // Toggle UI
-            document.getElementById('chart-section').classList.remove('hidden');
-            document.getElementById('table-section').classList.remove('hidden');
+            // הצגת אינדיקטור טעינה
+            document.getElementById('loading-indicator').classList.remove('hidden');
             document.getElementById('placeholder').classList.add('hidden');
 
-            updateTable(r1, r2);
-            updateChart(r1, r2);
+            try {
+                // משיכה ממוקדת של שני החדרים בלבד במקביל
+                const [snap1, snap2] = await Promise.all([
+                    getDoc(doc(db, "rooms", id1)),
+                    getDoc(doc(db, "rooms", id2))
+                ]);
+
+                const r1 = { id: snap1.id, ...snap1.data() };
+                const r2 = { id: snap2.id, ...snap2.data() };
+
+                // עדכון ממשק
+                updateTable(r1, r2);
+                updateChart(r1, r2);
+
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('chart-section').classList.remove('hidden');
+                document.getElementById('table-section').classList.remove('hidden');
+            } catch (err) {
+                console.error("Fetch error:", err);
+                document.getElementById('loading-indicator').innerText = "שגיאה בטעינת הנתונים";
+            }
         };
 
         function updateTable(r1, r2) {
-            document.getElementById('name-1').innerText = r1.name;
-            document.getElementById('name-2').innerText = r2.name;
-            document.getElementById('rate-1').innerText = `⭐ ${r1.rating.toFixed(1)}`;
-            document.getElementById('rate-2').innerText = `⭐ ${r2.rating.toFixed(1)}`;
-            document.getElementById('loc-1').innerText = r1.location;
-            document.getElementById('loc-2').innerText = r2.location;
+            document.getElementById('name-1').innerText = r1.name || 'ללא שם';
+            document.getElementById('name-2').innerText = r2.name || 'ללא שם';
+            document.getElementById('rate-1').innerText = `⭐ ${(r1.rating || 0).toFixed(1)}`;
+            document.getElementById('rate-2').innerText = `⭐ ${(r2.rating || 0).toFixed(1)}`;
+            document.getElementById('loc-1').innerText = r1.location || 'לא צוין';
+            document.getElementById('loc-2').innerText = r2.location || 'לא צוין';
             document.getElementById('kids-1').innerText = r1.kidFriendly ? '✅' : '❌';
             document.getElementById('kids-2').innerText = r2.kidFriendly ? '✅' : '❌';
         }
@@ -176,14 +176,14 @@
                     datasets: [
                         {
                             label: r1.name,
-                            data: [r1.scaryLevel, r1.techLevel, r1.difficulty || 5, r1.design || 5, r1.story || 5],
+                            data: [r1.scaryLevel || 0, r1.techLevel || 0, r1.difficulty || 5, r1.design || 5, r1.story || 5],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.2)',
                             pointBackgroundColor: '#3b82f6',
                         },
                         {
                             label: r2.name,
-                            data: [r2.scaryLevel, r2.techLevel, r2.difficulty || 5, r2.design || 5, r2.story || 5],
+                            data: [r2.scaryLevel || 0, r2.techLevel || 0, r2.difficulty || 5, r2.design || 5, r2.story || 5],
                             borderColor: '#a855f7',
                             backgroundColor: 'rgba(168, 85, 247, 0.2)',
                             pointBackgroundColor: '#a855f7',
@@ -193,15 +193,15 @@
                 options: {
                     scales: {
                         r: {
-                            angleLines: { color: 'rgba(255,255,255,0.05)' },
-                            grid: { color: 'rgba(255,255,255,0.05)' },
-                            pointLabels: { color: '#94a3b8', font: { size: 11 } },
-                            ticks: { display: false, max: 10, min: 0 },
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            pointLabels: { color: '#94a3b8' },
+                            ticks: { display: false },
                             suggestedMin: 0, suggestedMax: 10
                         }
                     },
                     plugins: {
-                        legend: { labels: { color: '#fff', font: { size: 12 } } }
+                        legend: { labels: { color: '#fff' } }
                     }
                 }
             });
