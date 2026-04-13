@@ -10,6 +10,8 @@
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: left 0.7rem top 50%; }
+        .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="pb-24">
@@ -35,8 +37,9 @@
             </div>
         </div>
 
-        <div id="loading-indicator" class="hidden text-center text-blue-400 py-4 animate-pulse">
-            מושך נתוני השוואה...
+        <div id="loading-indicator" class="hidden flex flex-col items-center justify-center py-10">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-12 w-12 mb-4"></div>
+            <p class="text-blue-400 animate-pulse">מושך נתוני השוואה...</p>
         </div>
 
         <div id="chart-section" class="glass p-6 rounded-3xl mb-8 hidden">
@@ -67,9 +70,9 @@
                         <td id="loc-2" class="p-4"></td>
                     </tr>
                     <tr>
-                        <td class="p-4 text-slate-400">לילדים?</td>
-                        <td id="kids-1" class="p-4 text-lg"></td>
-                        <td id="kids-2" class="p-4 text-lg"></td>
+                        <td class="p-4 text-slate-400">מתאים לילדים?</td>
+                        <td id="kids-1" class="p-4 text-lg text-center"></td>
+                        <td id="kids-2" class="p-4 text-lg text-center"></td>
                     </tr>
                 </tbody>
             </table>
@@ -84,7 +87,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeFirestore, collection, getDocs, getDoc, doc, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
@@ -96,11 +99,15 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        
+        // פתרון לבעיות חיבור: שימוש ב-Long Polling וזיכרון מטמון מקומי
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+            experimentalForceLongPolling: true 
+        });
 
         let myChart = null;
 
-        // טעינת רשימת השמות בלבד - מהיר מאוד
         async function initComparison() {
             const select1 = document.getElementById('select-1');
             const select2 = document.getElementById('select-2');
@@ -111,13 +118,16 @@
                 
                 querySnapshot.forEach((doc) => {
                     const room = doc.data();
-                    optionsHtml += `<option value="${doc.id}">${room.name}</option>`;
+                    optionsHtml += `<option value="${doc.id}">${room.name || 'חדר ללא שם'}</option>`;
                 });
 
                 select1.innerHTML = optionsHtml;
                 select2.innerHTML = optionsHtml;
             } catch (err) {
                 console.error("Error loading names:", err);
+                const errorMsg = '<option value="">שגיאה בטעינה</option>';
+                select1.innerHTML = errorMsg;
+                select2.innerHTML = errorMsg;
             }
         }
 
@@ -127,36 +137,40 @@
             
             if (!id1 || !id2) return;
 
-            // הצגת אינדיקטור טעינה
             document.getElementById('loading-indicator').classList.remove('hidden');
+            document.getElementById('chart-section').classList.add('hidden');
+            document.getElementById('table-section').classList.add('hidden');
             document.getElementById('placeholder').classList.add('hidden');
 
             try {
-                // משיכה ממוקדת של שני החדרים בלבד במקביל
+                // משיכה ממוקדת של 2 חדרים בלבד
                 const [snap1, snap2] = await Promise.all([
                     getDoc(doc(db, "rooms", id1)),
                     getDoc(doc(db, "rooms", id2))
                 ]);
 
-                const r1 = { id: snap1.id, ...snap1.data() };
-                const r2 = { id: snap2.id, ...snap2.data() };
+                if (snap1.exists() && snap2.exists()) {
+                    const r1 = { id: snap1.id, ...snap1.data() };
+                    const r2 = { id: snap2.id, ...snap2.data() };
 
-                // עדכון ממשק
-                updateTable(r1, r2);
-                updateChart(r1, r2);
+                    updateTable(r1, r2);
+                    updateChart(r1, r2);
 
-                document.getElementById('loading-indicator').classList.add('hidden');
-                document.getElementById('chart-section').classList.remove('hidden');
-                document.getElementById('table-section').classList.remove('hidden');
+                    document.getElementById('loading-indicator').classList.add('hidden');
+                    document.getElementById('chart-section').classList.remove('hidden');
+                    document.getElementById('table-section').classList.remove('hidden');
+                }
             } catch (err) {
                 console.error("Fetch error:", err);
-                document.getElementById('loading-indicator').innerText = "שגיאה בטעינת הנתונים";
+                alert("חלה שגיאה במשיכת נתוני החדרים. נסה שוב.");
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('placeholder').classList.remove('hidden');
             }
         };
 
         function updateTable(r1, r2) {
-            document.getElementById('name-1').innerText = r1.name || 'ללא שם';
-            document.getElementById('name-2').innerText = r2.name || 'ללא שם';
+            document.getElementById('name-1').innerText = r1.name || '-';
+            document.getElementById('name-2').innerText = r2.name || '-';
             document.getElementById('rate-1').innerText = `⭐ ${(r1.rating || 0).toFixed(1)}`;
             document.getElementById('rate-2').innerText = `⭐ ${(r2.rating || 0).toFixed(1)}`;
             document.getElementById('loc-1').innerText = r1.location || 'לא צוין';
@@ -180,6 +194,7 @@
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.2)',
                             pointBackgroundColor: '#3b82f6',
+                            borderWidth: 2
                         },
                         {
                             label: r2.name,
@@ -187,26 +202,30 @@
                             borderColor: '#a855f7',
                             backgroundColor: 'rgba(168, 85, 247, 0.2)',
                             pointBackgroundColor: '#a855f7',
+                            borderWidth: 2
                         }
                     ]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         r: {
                             angleLines: { color: 'rgba(255,255,255,0.1)' },
                             grid: { color: 'rgba(255,255,255,0.1)' },
-                            pointLabels: { color: '#94a3b8' },
-                            ticks: { display: false },
+                            pointLabels: { color: '#94a3b8', font: { size: 12 } },
+                            ticks: { display: false, stepSize: 2 },
                             suggestedMin: 0, suggestedMax: 10
                         }
                     },
                     plugins: {
-                        legend: { labels: { color: '#fff' } }
+                        legend: { position: 'top', labels: { color: '#fff', padding: 20 } }
                     }
                 }
             });
         }
 
+        // הפעלה ראשונית
         initComparison();
     </script>
 </body>
