@@ -3,65 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <title>מאתר חדרי בריחה AI | מצא את החדר המושלם עבורך</title>
-    <meta name="description" content="מחפשים חדר בריחה? המערכת החכמה שלנו תמצא לכם את 3 החדרים המומלצים ביותר לפי חיפוש חופשי: מפחיד, טכנולוגי, לילדים, קשה או עם עלילה סוחפת.">
-    <meta name="keywords" content="חדרי בריחה, מאתר חדרי בריחה, AI, חדר בריחה מפחיד, חדר בריחה לילדים, חדר בריחה מומלץ">
-    
+    <title>מאתר חדרי בריחה AI | EscapeRooms</title>
+    <meta name="description" content="מצא את חדר הבריחה המושלם עבורך באמצעות בינה מלאכותית">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .search-gradient { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
-        .ai-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
-        .result-card:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+        .ai-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+        .result-card { transition: all 0.3s ease; }
+        .result-card:hover { transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="pb-24">
 
-    <header class="relative h-64 w-full flex items-center justify-center overflow-hidden">
-        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center opacity-30"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-[#0f172a]"></div>
-        
+    <header class="relative h-56 w-full flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-[#0f172a]"></div>
         <div class="relative z-10 text-center px-6">
-            <h1 class="text-4xl font-extrabold text-white italic tracking-tight mb-2">
-                מאתר החדרים ה-<span class="text-blue-500">חכם</span>
-            </h1>
-            <p class="text-slate-400 max-w-md mx-auto">ספרו לנו מה החוויה שאתם מחפשים, וה-AI שלנו ימצא את ההתאמה המושלמת.</p>
+            <h1 class="text-3xl font-bold text-white italic mb-2">מאתר החדרים ה<span class="text-blue-400 text-4xl">AI</span></h1>
+            <p class="text-slate-400 text-sm">איזה סוג של הרפתקה אתם מחפשים היום?</p>
         </div>
     </header>
 
     <main class="max-w-4xl mx-auto px-6 -mt-10 relative z-10">
         
-        <div class="glass p-1 rounded-3xl ai-glow mb-10">
-            <div class="flex flex-col md:flex-row items-center gap-2 p-2">
+        <div class="glass p-2 rounded-2xl ai-glow mb-8">
+            <div class="flex flex-col md:flex-row gap-2">
                 <input type="text" id="ai-search-input" 
-                    placeholder="לדוגמא: חדר קריפי עם עלילה יפה וטכנולוגי ל-4 אנשים..." 
-                    class="w-full bg-slate-800/50 border-none rounded-2xl py-4 px-6 text-white focus:ring-2 focus:ring-blue-500 outline-none">
-                <button onclick="searchRooms()" 
-                    class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold transition-all whitespace-nowrap">
-                    מצא לי חדר ✨
+                    placeholder="לדוגמא: חדר טכנולוגי קשה עם עלילה יפה..." 
+                    class="w-full bg-slate-800/50 border-none rounded-xl py-4 px-5 text-white focus:ring-1 focus:ring-blue-500 outline-none transition-all">
+                <button onclick="handleSearch()" id="search-btn"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-bold transition-all">
+                    חפש לי
                 </button>
             </div>
         </div>
 
-        <div id="loading-state" class="hidden text-center py-10">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500 mb-4"></div>
-            <p class="text-slate-400 italic">המערכת מנתחת את ה-DB ומוצאת את החדרים הטובים ביותר...</p>
+        <div id="status-msg" class="hidden text-center py-8">
+            <div class="inline-block animate-bounce mb-2">🔍</div>
+            <p class="text-slate-400 text-sm italic" id="status-text">ה-AI מנתח את כל חדרי הבריחה עבורך...</p>
         </div>
 
-        <div id="results-container" class="grid grid-cols-1 gap-6">
+        <div id="results-container" class="grid grid-cols-1 gap-4">
             </div>
-
-        <div class="mt-8">
-            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">חיפושים נפוצים</h3>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="fillSearch('חדר קריפי ומפחיד')" class="text-xs px-4 py-2 rounded-full border border-slate-700 hover:bg-slate-800 transition">🔥 מפחיד</button>
-                <button onclick="fillSearch('חדר טכנולוגי קשה למתקדמים')" class="text-xs px-4 py-2 rounded-full border border-slate-700 hover:bg-slate-800 transition">🤖 טכנולוגי</button>
-                <button onclick="fillSearch('חדר מתאים לילדים עם משימות')" class="text-xs px-4 py-2 rounded-full border border-slate-700 hover:bg-slate-800 transition">👶 לילדים</button>
-                <button onclick="fillSearch('חדר ממתקים צבעוני')" class="text-xs px-4 py-2 rounded-full border border-slate-700 hover:bg-slate-800 transition">🍭 ממתקים</button>
-            </div>
-        </div>
 
     </main>
 
@@ -70,25 +53,16 @@
             <span class="text-xl">🔍</span>
             <span class="text-[10px]">חיפוש AI</span>
         </a>
-        <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
+        <a href="dashboard.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
             <span class="text-xl">🏠</span>
             <span class="text-[10px]">ראשי</span>
-        </a>
-        <a href="compare.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
-            <span class="text-xl">⚖️</span>
-            <span class="text-[10px]">השוואה</span>
-        </a>
-        <a href="passport.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-400 transition">
-            <span class="text-xl">🛂</span>
-            <span class="text-[10px]">פרופיל</span>
         </a>
     </nav>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Firebase Config (Using your existing credentials)
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -101,72 +75,109 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        window.fillSearch = function(text) {
-            document.getElementById('ai-search-input').value = text;
+        // פונקציה לשליפת ה-API Key מה-DB (כפי שמוגדר ב-PCS365)
+        async function getGeminiKey() {
+            try {
+                const configDoc = await getDoc(doc(db, "system_config", "geimini_settings"));
+                if (configDoc.exists()) {
+                    return configDoc.data().apiKey;
+                }
+                console.error("Config document not found");
+                return null;
+            } catch (e) {
+                console.error("Error fetching config:", e);
+                return null;
+            }
         }
 
-        window.searchRooms = async function() {
-            const input = document.getElementById('ai-search-input').value;
-            if (!input) return;
+        window.handleSearch = async function() {
+            const userInput = document.getElementById('ai-search-input').value;
+            if (!userInput) return;
 
             const resultsContainer = document.getElementById('results-container');
-            const loader = document.getElementById('loading-state');
-            
+            const statusMsg = document.getElementById('status-msg');
+            const btn = document.getElementById('search-btn');
+
+            // איפוס תצוגה
             resultsContainer.innerHTML = '';
-            loader.classList.remove('hidden');
+            statusMsg.classList.remove('hidden');
+            btn.disabled = true;
 
             try {
-                // Fetching all rooms to simulate AI filtering on client-side 
-                // In a production app, you would send the query to a Cloud Function/OpenAI
-                const querySnapshot = await getDocs(collection(db, "rooms"));
-                let rooms = [];
-                querySnapshot.forEach((doc) => {
-                    rooms.push({ id: doc.id, ...doc.data() });
+                // 1. שליפת המפתח מה-DB
+                const apiKey = await getGeminiKey();
+                if (!apiKey || apiKey === "AIX") {
+                    throw new Error("נא לעדכן את ה-API Key ב-Firestore (collection: system_config)");
+                }
+
+                // 2. שליפת כל החדרים כ-Context
+                const roomsSnap = await getDocs(collection(db, "rooms"));
+                let roomsData = [];
+                roomsSnap.forEach(d => {
+                    const data = d.data();
+                    roomsData.push({
+                        id: d.id,
+                        name: data.name,
+                        description: data.description,
+                        location: data.location,
+                        tags: [
+                            data.kidFriendly ? "מתאים לילדים" : "",
+                            data.scaryLevel > 6 ? "מפחיד" : "",
+                            data.techLevel > 6 ? "טכנולוגי" : ""
+                        ].filter(t => t !== "")
+                    });
                 });
 
-                // Simple keyword simulation for the AI logic
-                // In a real scenario, this is where you'd call your AI analysis endpoint
-                const results = rooms
-                    .sort(() => Math.random() - 0.5) // Simulation of AI selection
-                    .slice(0, 3);
+                // 3. בניית הפרומפט ופנייה ל-Gemini
+                const prompt = `אתה מומחה לחדרי בריחה. לפניך רשימת חדרים: ${JSON.stringify(roomsData)}. המשתמש מחפש: "${userInput}". בחר את 3 החדרים הכי מתאימים והחזר רק מערך JSON של ה-IDs שלהם, לדוגמה: ["id1", "id2"]`;
 
-                loader.classList.add('hidden');
-                renderResults(results);
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                const rawText = data.candidates[0].content.parts[0].text;
+                const cleanJson = rawText.replace(/```json|```/g, "").trim();
+                const recommendedIds = JSON.parse(cleanJson);
+
+                // 4. הצגת התוצאות
+                statusMsg.classList.add('hidden');
+                btn.disabled = false;
+                
+                const filteredRooms = roomsData.filter(r => recommendedIds.includes(r.id));
+                renderResults(filteredRooms);
 
             } catch (error) {
-                console.error("Error fetching rooms:", error);
-                loader.innerText = "שגיאה בחיפוש. נסו שוב.";
+                console.error(error);
+                statusMsg.innerHTML = `<p class="text-red-400 text-sm">שגיאה: ${error.message}</p>`;
+                btn.disabled = false;
             }
         }
 
         function renderResults(rooms) {
             const container = document.getElementById('results-container');
+            if (rooms.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-500 italic">לא מצאנו משהו שמתאים בדיוק... נסו לתאר אחרת</p>`;
+                return;
+            }
+
             rooms.forEach(room => {
-                const card = `
-                    <a href="room-details.html?id=${room.id}" class="result-card glass rounded-2xl overflow-hidden flex flex-col md:flex-row gap-4 border border-blue-500/20 hover:border-blue-500/50">
-                        <div class="w-full md:w-48 h-32 overflow-hidden">
-                            <img src="${room.image || 'https://via.placeholder.com/300x200'}" class="w-full h-full object-cover">
+                container.innerHTML += `
+                    <a href="room-details.html?id=${room.id}" class="result-card glass p-4 rounded-2xl flex flex-col gap-2 border border-white/5">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-blue-400 italic">${room.name}</h3>
+                            <span class="text-[10px] text-slate-500 italic">📍 ${room.location}</span>
                         </div>
-                        <div class="p-4 flex-1">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="text-xl font-bold text-blue-400 italic">${room.name}</h3>
-                                    <p class="text-slate-400 text-xs mt-1">📍 ${room.location}</p>
-                                </div>
-                                <span class="bg-blue-600/20 text-blue-400 text-xs px-2 py-1 rounded-lg border border-blue-500/30">
-                                    ⭐ ${room.rating.toFixed(1)}
-                                </span>
-                            </div>
-                            <p class="text-slate-300 text-xs mt-3 line-clamp-2">${room.description || 'תיאור קצר של החדר והחוויה...'}</p>
-                            <div class="mt-4 flex gap-2">
-                                ${room.kidFriendly ? '<span class="text-[8px] bg-green-900/20 text-green-400 px-2 py-0.5 rounded-full border border-green-800/30">ילדים</span>' : ''}
-                                ${room.scaryLevel > 7 ? '<span class="text-[8px] bg-red-900/20 text-red-400 px-2 py-0.5 rounded-full border border-red-800/30">מפחיד</span>' : ''}
-                                <span class="text-[8px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">לחץ לפרטים</span>
-                            </div>
+                        <p class="text-slate-300 text-xs line-clamp-2">${room.description || ''}</p>
+                        <div class="flex gap-2 mt-2">
+                            ${room.tags.map(t => `<span class="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20">${t}</span>`).join('')}
                         </div>
                     </a>
                 `;
-                container.innerHTML += card;
             });
         }
     </script>
