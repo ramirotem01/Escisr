@@ -43,16 +43,28 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-    <script src="firebase.js"></script>
 
     <script>
-        const PROJECT_ID = "escisr";
+        // הקונפיגורציה שסיפקת בתחילת השיחה
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        // אתחול Firebase והגדרת db
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         let cachedApiKey = null;
 
-        // שלב 1: שליפת המפתח מה-DB
         async function fetchApiKey() {
             if (cachedApiKey) return cachedApiKey;
             try {
+                // שים לב לאיות geimini כפי שמופיע ב-DB שלך
                 const doc = await db.collection("system_config").doc("geimini_settings").get();
                 if (doc.exists) {
                     cachedApiKey = doc.data().apiKey;
@@ -66,16 +78,13 @@
             }
         }
 
-        // שלב 2: גילוי המודל הזמין באופן דינמי (כמו ב-PCS365)
         async function getAvailableModel(apiKey) {
             try {
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
                 const data = await resp.json();
-                // מחפש מודל שתומך ביצירת תוכן (בדרך כלל ימצא את flash או pro)
                 const model = data.models.find(m => m.supportedGenerationMethods.includes("generateContent"));
                 return model ? model.name : "models/gemini-1.5-flash"; 
             } catch (e) {
-                console.warn("Model discovery failed, using fallback");
                 return "models/gemini-1.5-flash";
             }
         }
@@ -94,14 +103,13 @@
             searchBtn.disabled = true;
 
             try {
-                // א. הכנת המפתח והמודל
                 statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
                 const modelName = await getAvailableModel(apiKey);
 
-                // ב. שליפת חדרים מ-Firestore (pageSize מוגדל לסריקה רחבה)
-                statusText.innerText = "סורק נתונים...";
-                const snapshot = await db.collection("rooms").where("isClosed", "==", false).limit(50).get();
+                statusText.innerText = "סורק חדרים...";
+                // שליפת חדרים שאינם סגורים
+                const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
                 const rooms = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
@@ -113,11 +121,8 @@
                     });
                 });
 
-                // ג. פנייה ל-AI
-                statusText.innerText = "מנתח התאמות...";
-                const prompt = `User request: "${input}". 
-                Rooms list: ${JSON.stringify(rooms)}. 
-                Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
+                statusText.innerText = "ה-AI מחשב התאמות...";
+                const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(rooms)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
 
@@ -134,15 +139,18 @@
                 const cleanJson = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
                 const recommendedIds = JSON.parse(cleanJson);
 
-                // ד. הצגת תוצאות
                 statusContainer.classList.add('hidden');
                 recommendedIds.forEach(id => {
                     const room = rooms.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
-                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn" onclick="window.location.href='room.html?id=${room.id}'">
-                                <h3 class="text-xl font-bold">${room.name}</h3>
-                                <p class="text-slate-400 text-sm">📍 ${room.location} | ⭐ ${Number(room.rating).toFixed(1)}</p>
+                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" 
+                                 onclick="window.location.href='room.html?id=${room.id}'">
+                                <div class="flex justify-between">
+                                    <h3 class="text-xl font-bold">${room.name}</h3>
+                                    <span class="text-yellow-400">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                </div>
+                                <p class="text-slate-400 text-sm">📍 ${room.location}</p>
                             </div>`;
                     }
                 });
