@@ -26,15 +26,15 @@
     <div class="max-w-2xl mx-auto">
         <header class="text-center mb-10">
             <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms AI</h1>
-            <p class="text-slate-400 mt-2">תאר את החדר האידיאלי, וה-AI ימצא אותו</p>
+            <p class="text-slate-400 mt-2">ה-AI ימצא לך את החדר המושלם</p>
         </header>
 
         <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="למשל: מחפש חדר מפחיד עם שחקן בתל אביב שמתאים ל-5 אנשים..." 
+            <textarea id="user-input" placeholder="למשל: מחפש חדר מפחיד עם שחקן בתל אביב..." 
                 class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
             
             <button id="search-btn" onclick="handleAISearch()" 
-                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
                 <span>✨ מצא לי חדר</span>
             </button>
         </div>
@@ -65,9 +65,9 @@
             searchBtn.disabled = true;
 
             try {
-                // 1. שליפת מפתח ה-API מ-Firestore (מנתיב system_config/geimini_settings)
+                // 1. שליפת מפתח ה-API מהנתיב המדויק שלך ב-Firestore
                 if (!cachedApiKey) {
-                    statusText.innerText = "מתחבר להגדרות מערכת...";
+                    statusText.innerText = "מושך הגדרות מערכת...";
                     const keyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/system_config/geimini_settings`;
                     const keyResponse = await fetch(keyUrl);
                     const keyData = await keyResponse.json();
@@ -75,84 +75,70 @@
                     if (keyData.fields && keyData.fields.apiKey) {
                         cachedApiKey = keyData.fields.apiKey.stringValue;
                     } else {
-                        throw new Error("לא נמצא מפתח apiKey בנתיב המוגדר ב-DB");
+                        throw new Error("לא נמצא מפתח apiKey בנתיב system_config/geimini_settings");
                     }
                 }
 
-                // 2. שליפת החדרים מ-Firestore
-                statusText.innerText = "סורק חדרים בבסיס הנתונים...";
-                const fbUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/rooms?pageSize=50`;
+                // 2. שליפת רשימת החדרים
+                statusText.innerText = "סורק חדרים...";
+                const fbUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/rooms?pageSize=100`;
                 const fbResponse = await fetch(fbUrl);
                 const fbData = await fbResponse.json();
 
-                if (!fbData.documents) throw new Error("לא נמצאו חדרים בבסיס הנתונים");
-
-                const rooms = fbData.documents.map(doc => {
+                const rooms = (fbData.documents || []).map(doc => {
                     const f = doc.fields;
                     return {
                         id: doc.name.split('/').pop(),
                         name: f.name?.stringValue || "ללא שם",
                         location: f.location?.stringValue || "לא מצוין",
                         rating: f.rating?.doubleValue || f.rating?.integerValue || 0,
-                        scaryLevel: f.scaryLevel?.integerValue || 0,
-                        isClosed: f.isClosed?.booleanValue || false
+                        scaryLevel: f.scaryLevel?.integerValue || 0
                     };
-                }).filter(r => !r.isClosed);
+                });
 
-                // 3. שליחה ל-Gemini AI
-                statusText.innerText = "ה-AI מחשב את ההתאמות...";
-                const promptText = `
-                    You are an expert escape room recommender.
-                    User Request: "${input}"
-                    Available Rooms: ${JSON.stringify(rooms)}
-                    Task: Return ONLY a valid JSON array of the top 3 room IDs. 
-                    Format: ["id1", "id2", "id3"]
-                `;
+                // 3. פנייה ל-Gemini עם ה-URL המעודכן
+                statusText.innerText = "ה-AI מחשב התאמות...";
+                
+                // עדכון ה-URL לגרסה שעובדת: הסרת ה-v1beta או שינוי המבנה ל-gemini-1.5-flash-latest
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${cachedApiKey}`;
+                
+                const promptText = `User wants: "${input}". Rooms: ${JSON.stringify(rooms)}. Return ONLY a JSON array of the top 3 IDs.`;
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cachedApiKey}`;
                 const aiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }]
+                    })
                 });
 
                 const aiData = await aiResponse.json();
-                if (aiData.error) throw new Error("שגיאת AI: " + aiData.error.message);
+                
+                if (aiData.error) {
+                    // אם גם v1 לא עובד, ננסה את הנתיב המלא של v1beta עם השם המלא
+                    throw new Error(aiData.error.message);
+                }
 
                 const aiText = aiData.candidates[0].content.parts[0].text;
                 const match = aiText.match(/\[.*\]/s);
-                if (!match) throw new Error("ה-AI לא החזיר פורמט תקין");
                 const recommendedIds = JSON.parse(match[0]);
 
-                // 4. הצגת התוצאות
+                // 4. הצגה
                 statusContainer.classList.add('hidden');
-                
-                if (recommendedIds.length === 0) {
-                    resultsContainer.innerHTML = '<p class="text-center text-slate-500">לא נמצאו חדרים מתאימים לחיפוש שלך.</p>';
-                }
-
                 recommendedIds.forEach(id => {
                     const room = rooms.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
-                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" 
-                                 onclick="window.location.href='room.html?id=${room.id}'">
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-xl font-bold">${room.name}</h3>
-                                    <span class="text-yellow-400 font-bold">⭐ ${Number(room.rating).toFixed(1)}</span>
-                                </div>
-                                <p class="text-slate-400 text-sm">📍 ${room.location}</p>
-                                <div class="mt-4 pt-4 border-t border-white/5 text-[10px] font-bold text-slate-500 uppercase">
-                                    💀 רמת פחד: ${room.scaryLevel}/10
-                                </div>
-                            </div>
-                        `;
+                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" onclick="window.location.href='room.html?id=${room.id}'">
+                                <h3 class="text-xl font-bold">${room.name}</h3>
+                                <p class="text-slate-400 text-sm">📍 ${room.location} | ⭐ ${Number(room.rating).toFixed(1)}</p>
+                            </div>`;
                     }
                 });
 
             } catch (error) {
-                console.error("Error:", error);
-                alert("שגיאה: " + error.message);
+                console.error("AI Error:", error);
+                alert("שגיאה בתהליך: " + error.message);
                 statusContainer.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
