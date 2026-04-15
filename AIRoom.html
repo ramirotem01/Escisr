@@ -3,48 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Room Finder | EscapeRooms</title>
+    <title>Debug AI | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { background-color: #020617; color: white; font-family: 'Heebo', sans-serif; text-align: right; }
         .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .loader {
-            width: 40px; height: 40px;
-            border: 3px solid transparent;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        .loader { width: 40px; height: 40px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="p-6 pb-24">
+<body class="p-6">
 
     <div class="max-w-2xl mx-auto">
         <header class="text-center mb-10">
-            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms AI</h1>
-            <p class="text-slate-400 mt-2">ה-AI ימצא לך את החדר המושלם</p>
+            <h1 class="text-3xl font-black text-blue-400">AI Debug Mode</h1>
+            <p class="text-slate-400">בדוק את ה-Console (F12) בזמן הלחיצה</p>
         </header>
 
-        <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="למשל: מחפש חדר מפחיד עם שחקן בתל אביב..." 
-                class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
-            
-            <button id="search-btn" onclick="handleAISearch()" 
-                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
-                <span>✨ מצא לי חדר</span>
-            </button>
+        <div class="glass p-6 rounded-[2.5rem] mb-8">
+            <textarea id="user-input" placeholder="כתוב משהו לחיפוש..." class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none h-32"></textarea>
+            <button id="search-btn" onclick="handleAISearch()" class="w-full mt-4 bg-blue-600 py-4 rounded-2xl font-bold">✨ הרץ בדיקה</button>
         </div>
 
-        <div id="status-container" class="hidden flex flex-col items-center gap-4 mb-8">
+        <div id="status-container" class="hidden flex flex-col items-center gap-4">
             <div class="loader"></div>
-            <p id="status-text" class="text-blue-400 font-bold animate-pulse text-sm"></p>
+            <p id="status-text" class="text-blue-400 font-bold italic"></p>
         </div>
 
-        <div id="results-container" class="grid gap-6"></div>
+        <div id="results-container" class="grid gap-6 mt-8"></div>
     </div>
 
     <script>
@@ -53,95 +40,67 @@
 
         async function handleAISearch() {
             const input = document.getElementById('user-input').value.trim();
-            if (!input) return alert("אנא תאר את החדר שאתה מחפש");
-
             const statusContainer = document.getElementById('status-container');
             const statusText = document.getElementById('status-text');
             const resultsContainer = document.getElementById('results-container');
-            const searchBtn = document.getElementById('search-btn');
 
-            resultsContainer.innerHTML = '';
             statusContainer.classList.remove('hidden');
-            searchBtn.disabled = true;
+            statusText.innerText = "מתחיל תהליך בדיקה...";
 
             try {
-                // 1. שליפת מפתח ה-API מהנתיב המדויק שלך ב-Firestore
+                // 1. שליפת מפתח
                 if (!cachedApiKey) {
-                    statusText.innerText = "מושך הגדרות מערכת...";
                     const keyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/system_config/geimini_settings`;
                     const keyResponse = await fetch(keyUrl);
                     const keyData = await keyResponse.json();
-                    
-                    if (keyData.fields && keyData.fields.apiKey) {
-                        cachedApiKey = keyData.fields.apiKey.stringValue;
-                    } else {
-                        throw new Error("לא נמצא מפתח apiKey בנתיב system_config/geimini_settings");
-                    }
+                    cachedApiKey = keyData.fields?.apiKey?.stringValue;
+                    console.log("🔑 API Key retrieved:", cachedApiKey ? "YES (starts with " + cachedApiKey.substring(0, 5) + ")" : "NO");
                 }
 
-                // 2. שליפת רשימת החדרים
-                statusText.innerText = "סורק חדרים...";
-                const fbUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/rooms?pageSize=100`;
+                // 2. שליפת חדרים
+                const fbUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/rooms?pageSize=20`;
                 const fbResponse = await fetch(fbUrl);
                 const fbData = await fbResponse.json();
+                const rooms = (fbData.documents || []).map(doc => ({
+                    id: doc.name.split('/').pop(),
+                    name: doc.fields?.name?.stringValue || "Unknown"
+                }));
+                console.log("📋 Rooms found in DB:", rooms.length, rooms);
 
-                const rooms = (fbData.documents || []).map(doc => {
-                    const f = doc.fields;
-                    return {
-                        id: doc.name.split('/').pop(),
-                        name: f.name?.stringValue || "ללא שם",
-                        location: f.location?.stringValue || "לא מצוין",
-                        rating: f.rating?.doubleValue || f.rating?.integerValue || 0,
-                        scaryLevel: f.scaryLevel?.integerValue || 0
-                    };
-                });
+                // 3. הכנת הפרומפט והדפסה לבלוג
+                const promptText = `User wants: "${input}". Recommend from: ${JSON.stringify(rooms)}. Return JSON array of IDs.`;
+                const payload = {
+                    contents: [{ parts: [{ text: promptText }] }]
+                };
 
-                // 3. פנייה ל-Gemini עם ה-URL המעודכן
-                statusText.innerText = "ה-AI מחשב התאמות...";
-                
-                // עדכון ה-URL לגרסה שעובדת: הסרת ה-v1beta או שינוי המבנה ל-gemini-1.5-flash-latest
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${cachedApiKey}`;
-                
-                const promptText = `User wants: "${input}". Rooms: ${JSON.stringify(rooms)}. Return ONLY a JSON array of the top 3 IDs.`;
+                console.log("🚀 SENDING TO GEMINI:");
+                console.log("URL:", `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cachedApiKey}`);
+                console.log("Payload:", JSON.stringify(payload, null, 2));
 
+                // 4. שליחה ל-AI
+                statusText.innerText = "שולח ל-AI... בדוק לוגים";
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cachedApiKey}`;
                 const aiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptText }] }]
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const aiData = await aiResponse.json();
-                
+                console.log("📥 RESPONSE FROM GEMINI:", aiData);
+
                 if (aiData.error) {
-                    // אם גם v1 לא עובד, ננסה את הנתיב המלא של v1beta עם השם המלא
+                    console.error("❌ GEMINI ERROR:", aiData.error);
                     throw new Error(aiData.error.message);
                 }
 
-                const aiText = aiData.candidates[0].content.parts[0].text;
-                const match = aiText.match(/\[.*\]/s);
-                const recommendedIds = JSON.parse(match[0]);
-
-                // 4. הצגה
-                statusContainer.classList.add('hidden');
-                recommendedIds.forEach(id => {
-                    const room = rooms.find(r => r.id === id);
-                    if (room) {
-                        resultsContainer.innerHTML += `
-                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" onclick="window.location.href='room.html?id=${room.id}'">
-                                <h3 class="text-xl font-bold">${room.name}</h3>
-                                <p class="text-slate-400 text-sm">📍 ${room.location} | ⭐ ${Number(room.rating).toFixed(1)}</p>
-                            </div>`;
-                    }
-                });
+                statusText.innerText = "הצלחנו! התוצאות בלוג.";
+                resultsContainer.innerHTML = `<pre class="glass p-4 text-xs text-green-400 overflow-auto">${JSON.stringify(aiData, null, 2)}</pre>`;
 
             } catch (error) {
-                console.error("AI Error:", error);
-                alert("שגיאה בתהליך: " + error.message);
-                statusContainer.classList.add('hidden');
-            } finally {
-                searchBtn.disabled = false;
+                console.error("🚨 CRITICAL ERROR:", error);
+                statusText.innerText = "שגיאה. פרטים ב-Console.";
+                resultsContainer.innerHTML = `<div class="bg-red-900/20 p-4 border border-red-500 text-red-400 rounded-xl">${error.message}</div>`;
             }
         }
     </script>
