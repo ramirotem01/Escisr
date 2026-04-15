@@ -20,11 +20,11 @@
     <div class="max-w-2xl mx-auto">
         <header class="text-center mb-10">
             <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms AI</h1>
-            <p class="text-slate-400 mt-2">מצאנו את הבעיה בכתובת, עכשיו זה אמור לעבוד</p>
+            <p class="text-slate-400 mt-2">חיפוש חכם מבוסס בינה מלאכותית</p>
         </header>
 
         <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="למשל: חדר עם שחקן לילדים..." 
+            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר עם שחקן לילדים" 
                 class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
             
             <button id="search-btn" onclick="handleAISearch()" 
@@ -41,13 +41,48 @@
         <div id="results-container" class="grid gap-6"></div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase.js"></script>
+
     <script>
         const PROJECT_ID = "escisr";
         let cachedApiKey = null;
 
+        // שלב 1: שליפת המפתח מה-DB
+        async function fetchApiKey() {
+            if (cachedApiKey) return cachedApiKey;
+            try {
+                const doc = await db.collection("system_config").doc("geimini_settings").get();
+                if (doc.exists) {
+                    cachedApiKey = doc.data().apiKey;
+                    return cachedApiKey;
+                } else {
+                    throw new Error("מפתח AI לא נמצא ב-system_config/geimini_settings");
+                }
+            } catch (e) {
+                console.error("Key fetch error:", e);
+                throw e;
+            }
+        }
+
+        // שלב 2: גילוי המודל הזמין באופן דינמי (כמו ב-PCS365)
+        async function getAvailableModel(apiKey) {
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                const data = await resp.json();
+                // מחפש מודל שתומך ביצירת תוכן (בדרך כלל ימצא את flash או pro)
+                const model = data.models.find(m => m.supportedGenerationMethods.includes("generateContent"));
+                return model ? model.name : "models/gemini-1.5-flash"; 
+            } catch (e) {
+                console.warn("Model discovery failed, using fallback");
+                return "models/gemini-1.5-flash";
+            }
+        }
+
         async function handleAISearch() {
             const input = document.getElementById('user-input').value.trim();
-            if (!input) return alert("אנא תאר את החדר שאתה מחפש");
+            if (!input) return;
 
             const statusContainer = document.getElementById('status-container');
             const statusText = document.getElementById('status-text');
@@ -59,52 +94,47 @@
             searchBtn.disabled = true;
 
             try {
-                // 1. שליפת מפתח ה-API מה-DB
-                if (!cachedApiKey) {
-                    statusText.innerText = "מושך מפתח מערכת...";
-                    const keyUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/system_config/geimini_settings`;
-                    const keyResponse = await fetch(keyUrl);
-                    const keyData = await keyResponse.json();
-                    cachedApiKey = keyData.fields?.apiKey?.stringValue;
-                    if (!cachedApiKey) throw new Error("מפתח API לא נמצא ב-DB");
-                }
+                // א. הכנת המפתח והמודל
+                statusText.innerText = "מתחבר ל-AI...";
+                const apiKey = await fetchApiKey();
+                const modelName = await getAvailableModel(apiKey);
 
-                // 2. שליפת רשימת החדרים
-                statusText.innerText = "סורק חדרים...";
-                const fbUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/rooms?pageSize=40`;
-                const fbResponse = await fetch(fbUrl);
-                const fbData = await fbResponse.json();
-                const rooms = (fbData.documents || []).map(doc => ({
-                    id: doc.name.split('/').pop(),
-                    name: doc.fields?.name?.stringValue || "ללא שם",
-                    location: doc.fields?.location?.stringValue || "לא מצוין",
-                    rating: doc.fields?.rating?.doubleValue || doc.fields?.rating?.integerValue || 0
-                }));
-
-                // 3. פנייה ל-Gemini עם השם המעודכן של המודל (gemini-1.5-flash-latest)
-                statusText.innerText = "ה-AI מחשב התאמות...";
-                
-                // שימוש ב-gemini-1.5-flash-latest פותר את שגיאת ה-404 ב-v1beta
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${cachedApiKey}`;
-                
-                const promptText = `User wants: "${input}". From this list: ${JSON.stringify(rooms)}. Return ONLY a JSON array of the top 3 IDs.`;
-
-                const aiResponse = await fetch(geminiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptText }] }]
-                    })
+                // ב. שליפת חדרים מ-Firestore (pageSize מוגדל לסריקה רחבה)
+                statusText.innerText = "סורק נתונים...";
+                const snapshot = await db.collection("rooms").where("isClosed", "==", false).limit(50).get();
+                const rooms = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    rooms.push({
+                        id: doc.id,
+                        name: data.name || "ללא שם",
+                        location: data.location || "לא מצוין",
+                        rating: data.rating || 0
+                    });
                 });
 
-                const aiData = await aiResponse.json();
-                if (aiData.error) throw new Error(aiData.error.message);
+                // ג. פנייה ל-AI
+                statusText.innerText = "מנתח התאמות...";
+                const prompt = `User request: "${input}". 
+                Rooms list: ${JSON.stringify(rooms)}. 
+                Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
 
-                const aiText = aiData.candidates[0].content.parts[0].text;
-                const match = aiText.match(/\[.*\]/s);
-                const recommendedIds = JSON.parse(match[0]);
+                const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
 
-                // 4. הצגה
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error.message);
+
+                const aiText = data.candidates[0].content.parts[0].text;
+                const cleanJson = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+                const recommendedIds = JSON.parse(cleanJson);
+
+                // ד. הצגת תוצאות
                 statusContainer.classList.add('hidden');
                 recommendedIds.forEach(id => {
                     const room = rooms.find(r => r.id === id);
@@ -118,7 +148,7 @@
                 });
 
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Process error:", error);
                 alert("שגיאה: " + error.message);
                 statusContainer.classList.add('hidden');
             } finally {
