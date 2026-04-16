@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול מערכת | EscapeRooms (DEBUG MODE)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .edit-mode { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+    </style>
+</head>
+<body class="p-6 pb-24 text-right">
+
+    <div class="max-w-2xl mx-auto">
+        <header class="mb-8 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-400">ניהול חדרים 🛠️ <span class="text-xs text-red-500">(Debug On)</span></h1>
+            <a href="index.html" class="text-xs bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300">חזרה לאתר</a>
+        </header>
+
+        <div id="connection-status" class="mb-4 p-2 text-xs rounded-lg bg-slate-800 text-slate-400">
+            מנסה להתחבר ל-Firebase...
+        </div>
+        
+        <section id="form-container" class="glass p-6 rounded-3xl mb-10 shadow-2xl border-t border-white/10 transition-all">
+            <h2 id="form-title" class="text-lg font-bold mb-4 text-blue-400">✨ הוספת חדר חדש</h2>
+            <form id="room-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="edit-id">
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1">שם החדר</label>
+                    <input type="text" id="name" required placeholder="שם החדר..." class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1">עיר</label>
+                    <select id="location" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
+                        <option value="" disabled selected>בחר עיר...</option>
+                        <option value="תל אביב">תל אביב</option>
+                        <option value="ירושלים">ירושלים</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-slate-500 mb-1">ציון כללי</label>
+                    <input type="number" id="rating" step="0.1" min="1" max="10" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl text-yellow-500">
+                </div>
+                <div class="md:col-span-2 flex gap-2 mt-4">
+                    <button type="submit" id="submit-btn" class="flex-grow bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all">
+                        הוסף חדר למערכת 🚀
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-bold text-slate-400 mb-4">📋 רשימת חדרים</h2>
+            <div id="admin-rooms-list" class="space-y-3"></div>
+        </section>
+    </div>
+
+    <script type="module">
+        // לוג ראשוני
+        console.log("🚀 [DEBUG] התחלת טעינת דף הניהול...");
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { initializeFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
+            authDomain: "escisr.firebaseapp.com",
+            projectId: "escisr",
+            storageBucket: "escisr.firebasestorage.app",
+            messagingSenderId: "907984583225",
+            appId: "1:907984583225:web:66777e44fb162f68c3abe8"
+        };
+
+        let db;
+        const statusEl = document.getElementById('connection-status');
+
+        try {
+            console.log("🔗 [DEBUG] מנסה לאתחל את Firebase App...");
+            const app = initializeApp(firebaseConfig);
+            console.log("✅ [DEBUG] Firebase App אותחל בהצלחה.");
+
+            // שימוש ב-initializeFirestore עם Force Long Polling לפתרון בעיות חיבור
+            console.log("🔥 [DEBUG] מנסה לאתחל את Firestore (Force Long Polling)...");
+            db = initializeFirestore(app, {
+                experimentalForceLongPolling: true,
+                useFetchStreams: false
+            });
+            console.log("✅ [DEBUG] Firestore אותחל.");
+            statusEl.innerText = "מחובר ל-Firebase (שיטת Polling)";
+            statusEl.classList.replace('text-slate-400', 'text-green-400');
+        } catch (err) {
+            console.error("❌ [DEBUG] שגיאה קריטית באתחול Firebase:", err);
+            statusEl.innerText = "שגיאת אתחול: " + err.message;
+            statusEl.classList.replace('text-slate-400', 'text-red-400');
+        }
+
+        async function loadAdminRooms() {
+            console.log("📥 [DEBUG] מנסה למשוך נתונים מקולקשן 'rooms'...");
+            const list = document.getElementById('admin-rooms-list');
+            list.innerHTML = 'טוען...';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                console.log(`✅ [DEBUG] משיכת הנתונים הצליחה. נמצאו ${querySnapshot.size} חדרים.`);
+                
+                const listHTML = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    listHTML.push(`
+                        <div class="glass p-4 rounded-2xl flex justify-between items-center border-r-4 border-blue-500">
+                            <div>
+                                <h3 class="font-bold text-blue-100">${data.name}</h3>
+                                <p class="text-[10px] text-slate-500">${data.location} | ID: ${doc.id}</p>
+                            </div>
+                        </div>
+                    `);
+                });
+                list.innerHTML = listHTML.join('') || "אין חדרים בבסיס הנתונים.";
+            } catch (err) {
+                console.error("❌ [DEBUG] שגיאה במשיכת הנתונים (getDocs):", err);
+                console.error("קוד שגיאה:", err.code);
+                console.error("הודעה:", err.message);
+                
+                list.innerHTML = `<div class="text-red-500 text-sm">שגיאה: ${err.message}<br>בדוק את הקונסול לפרטים.</div>`;
+                statusEl.innerText = "שגיאת תקשורת: " + err.code;
+            }
+        }
+
+        document.getElementById('room-form').onsubmit = async (e) => {
+            e.preventDefault();
+            console.log("📤 [DEBUG] מנסה לשלוח חדר חדש...");
+            
+            const roomData = {
+                name: document.getElementById('name').value,
+                location: document.getElementById('location').value,
+                rating: parseFloat(document.getElementById('rating').value),
+                createdAt: new Date()
+            };
+
+            try {
+                const docRef = await addDoc(collection(db, "rooms"), roomData);
+                console.log("✅ [DEBUG] החדר נוסף בהצלחה! מזהה (ID):", docRef.id);
+                alert("הצלחה!");
+                loadAdminRooms();
+            } catch (err) {
+                console.error("❌ [DEBUG] שגיאה בכתיבת נתונים (addDoc):", err);
+                alert("שגיאת כתיבה: " + err.message);
+            }
+        };
+
+        // הפעלה
+        loadAdminRooms();
+
+    </script>
+</body>
+</html>
