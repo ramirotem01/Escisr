@@ -24,11 +24,11 @@
         </header>
 
         <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר מפחיד עם שחקן לילדים" 
-                class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg text-right"></textarea>
+            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר עם שחקן לילדים" 
+                class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
             
             <button id="search-btn" onclick="handleAISearch()" 
-                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
                 <span>✨ מצא לי חדר</span>
             </button>
         </div>
@@ -45,6 +45,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
+        // הקונפיגורציה שסיפקת בתחילת השיחה
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -54,21 +55,22 @@
             appId: "1:907984583225:web:66777e44fb162f68c3abe8"
         };
 
+        // אתחול Firebase והגדרת db
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1519074063912-ad25b57b984a?q=80&w=800";
 
         let cachedApiKey = null;
 
         async function fetchApiKey() {
             if (cachedApiKey) return cachedApiKey;
             try {
+                // שים לב לאיות geimini כפי שמופיע ב-DB שלך
                 const doc = await db.collection("system_config").doc("geimini_settings").get();
                 if (doc.exists) {
                     cachedApiKey = doc.data().apiKey;
                     return cachedApiKey;
                 } else {
-                    throw new Error("מפתח AI לא נמצא ב-DB");
+                    throw new Error("מפתח AI לא נמצא ב-system_config/geimini_settings");
                 }
             } catch (e) {
                 console.error("Key fetch error:", e);
@@ -105,24 +107,21 @@
                 const apiKey = await fetchApiKey();
                 const modelName = await getAvailableModel(apiKey);
 
-                statusText.innerText = "סורק חדרים פנויים...";
+                statusText.innerText = "סורק חדרים...";
+                // שליפת חדרים שאינם סגורים
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
                 const rooms = [];
-                
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     rooms.push({
                         id: doc.id,
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
-                        rating: data.rating || 0,
-                        image: data.image || DEFAULT_IMAGE,
-                        description: data.description || "" 
+                        rating: data.rating || 0
                     });
                 });
 
-                statusText.innerText = "ה-AI מחשב התאמה אישית...";
-                // שולחים ל-AI את כל המידע כולל תיאור כדי שיבצע התאמה חכמה
+                statusText.innerText = "ה-AI מחשב התאמות...";
                 const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(rooms)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
@@ -141,41 +140,24 @@
                 const recommendedIds = JSON.parse(cleanJson);
 
                 statusContainer.classList.add('hidden');
-                
-                if (recommendedIds.length === 0) {
-                    resultsContainer.innerHTML = '<p class="text-center text-slate-500 italic">לא נמצאו חדרים התואמים את התיאור שלך...</p>';
-                }
-
                 recommendedIds.forEach(id => {
                     const room = rooms.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
-                            <div class="glass overflow-hidden rounded-[2.5rem] border-b-4 border-blue-500 animate-fadeIn cursor-pointer transition-all hover:scale-[1.02] hover:shadow-blue-900/20" 
+                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" 
                                  onclick="window.location.href='room.html?id=${room.id}'">
-                                
-                                <div class="relative h-44 w-full">
-                                    <img src="${room.image}" alt="${room.name}" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent"></div>
+                                <div class="flex justify-between">
+                                    <h3 class="text-xl font-bold">${room.name}</h3>
+                                    <span class="text-yellow-400">⭐ ${Number(room.rating).toFixed(1)}</span>
                                 </div>
-
-                                <div class="p-6">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <div>
-                                            <h3 class="text-xl font-bold text-white leading-tight">${room.name}</h3>
-                                            <p class="text-slate-400 text-sm mt-1">📍 ${room.location}</p>
-                                        </div>
-                                        <div class="bg-slate-900/80 px-3 py-1 rounded-xl border border-white/5">
-                                            <span class="text-yellow-400 font-bold">⭐ ${Number(room.rating).toFixed(1)}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <p class="text-slate-400 text-sm">📍 ${room.location}</p>
                             </div>`;
                     }
                 });
 
             } catch (error) {
                 console.error("Process error:", error);
-                alert("שגיאה בחיפוש: " + error.message);
+                alert("שגיאה: " + error.message);
                 statusContainer.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
