@@ -118,6 +118,7 @@
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
                         rating: data.rating || 0
+                        image: data.image || ""
                     });
                 });
 
@@ -141,19 +142,28 @@
 
                 statusContainer.classList.add('hidden');
                 recommendedIds.forEach(id => {
-                    const room = rooms.find(r => r.id === id);
-                    if (room) {
-                        resultsContainer.innerHTML += `
-                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" 
-                                 onclick="window.location.href='room.html?id=${room.id}'">
-                                <div class="flex justify-between">
-                                    <h3 class="text-xl font-bold">${room.name}</h3>
-                                    <span class="text-yellow-400">⭐ ${Number(room.rating).toFixed(1)}</span>
-                                </div>
-                                <p class="text-slate-400 text-sm">📍 ${room.location}</p>
-                            </div>`;
-                    }
-                });
+    const room = rooms.find(r => r.id === id);
+    if (room) {
+        resultsContainer.innerHTML += `
+            <div class="glass p-4 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer flex gap-4 items-center" 
+                 onclick="window.location.href='room.html?id=${room.id}'">
+                
+                <div class="w-20 h-20 flex-shrink-0">
+                    <img src="${room.image || 'https://via.placeholder.com/150'}" 
+                         alt="${room.name}" 
+                         class="w-full h-full object-cover rounded-2xl shadow-inner bg-slate-700">
+                </div>
+
+                <div class="flex-grow">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xl font-bold">${room.name}</h3>
+                        <span class="text-yellow-400 text-sm">⭐ ${Number(room.rating).toFixed(1)}</span>
+                    </div>
+                    <p class="text-slate-400 text-sm mt-1">📍 ${room.location}</p>
+                </div>
+            </div>`;
+    }
+});
 
             } catch (error) {
                 console.error("Process error:", error);
