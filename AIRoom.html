@@ -45,7 +45,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // הקונפיגורציה שסיפקת בתחילת השיחה
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -55,7 +54,6 @@
             appId: "1:907984583225:web:66777e44fb162f68c3abe8"
         };
 
-        // אתחול Firebase והגדרת db
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -64,13 +62,12 @@
         async function fetchApiKey() {
             if (cachedApiKey) return cachedApiKey;
             try {
-                // שים לב לאיות geimini כפי שמופיע ב-DB שלך
                 const doc = await db.collection("system_config").doc("geimini_settings").get();
                 if (doc.exists) {
                     cachedApiKey = doc.data().apiKey;
                     return cachedApiKey;
                 } else {
-                    throw new Error("מפתח AI לא נמצא ב-system_config/geimini_settings");
+                    throw new Error("מפתח AI לא נמצא");
                 }
             } catch (e) {
                 console.error("Key fetch error:", e);
@@ -98,17 +95,16 @@
             const resultsContainer = document.getElementById('results-container');
             const searchBtn = document.getElementById('search-btn');
 
-    location: data.location || "לא מצוין",
-    rating: data.rating || 0, // שים לב לפסיק שהיה חסר כאן
-    image: data.image || ""
-});
+            resultsContainer.innerHTML = '';
+            statusContainer.classList.remove('hidden');
+            searchBtn.disabled = true;
+
             try {
                 statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
                 const modelName = await getAvailableModel(apiKey);
 
                 statusText.innerText = "סורק חדרים...";
-                // שליפת חדרים שאינם סגורים
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
                 const rooms = [];
                 snapshot.forEach(doc => {
@@ -117,7 +113,7 @@
                         id: doc.id,
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
-                        rating: data.rating || 0
+                        rating: data.rating || 0, // הפסיק כאן תוקן
                         image: data.image || ""
                     });
                 });
@@ -142,28 +138,28 @@
 
                 statusContainer.classList.add('hidden');
                 recommendedIds.forEach(id => {
-    const room = rooms.find(r => r.id === id);
-    if (room) {
-        resultsContainer.innerHTML += `
-            <div class="glass p-4 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer flex gap-4 items-center" 
-                 onclick="window.location.href='room.html?id=${room.id}'">
-                
-                <div class="w-20 h-20 flex-shrink-0">
-                    <img src="${room.image || 'https://via.placeholder.com/150'}" 
-                         alt="${room.name}" 
-                         class="w-full h-full object-cover rounded-2xl shadow-inner bg-slate-700">
-                </div>
+                    const room = rooms.find(r => r.id === id);
+                    if (room) {
+                        resultsContainer.innerHTML += `
+                            <div class="glass p-4 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer flex gap-4 items-center" 
+                                 onclick="window.location.href='room.html?id=${room.id}'">
+                                
+                                <div class="w-20 h-20 flex-shrink-0">
+                                    <img src="${room.image || 'https://via.placeholder.com/150'}" 
+                                         alt="${room.name}" 
+                                         class="w-full h-full object-cover rounded-2xl shadow-inner bg-slate-700">
+                                </div>
 
-                <div class="flex-grow">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-xl font-bold">${room.name}</h3>
-                        <span class="text-yellow-400 text-sm">⭐ ${Number(room.rating).toFixed(1)}</span>
-                    </div>
-                    <p class="text-slate-400 text-sm mt-1">📍 ${room.location}</p>
-                </div>
-            </div>`;
-    }
-});
+                                <div class="flex-grow">
+                                    <div class="flex justify-between items-start">
+                                        <h3 class="text-xl font-bold">${room.name}</h3>
+                                        <span class="text-yellow-400 text-sm">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-sm mt-1">📍 ${room.location}</p>
+                                </div>
+                            </div>`;
+                    }
+                });
 
             } catch (error) {
                 console.error("Process error:", error);
