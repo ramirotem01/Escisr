@@ -98,10 +98,10 @@
             const resultsContainer = document.getElementById('results-container');
             const searchBtn = document.getElementById('search-btn');
 
-            resultsContainer.innerHTML = '';
-            statusContainer.classList.remove('hidden');
-            searchBtn.disabled = true;
-
+    location: data.location || "לא מצוין",
+    rating: data.rating || 0, // שים לב לפסיק שהיה חסר כאן
+    image: data.image || ""
+});
             try {
                 statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
