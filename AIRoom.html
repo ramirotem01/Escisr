@@ -68,18 +68,12 @@
                     cachedApiKey = doc.data().apiKey;
                     return cachedApiKey;
                 } else {
-                    throw new Error("מפתח AI לא נמצא");
+                    throw new Error("מפתח AI לא נמצא ב-DB");
                 }
             } catch (e) {
                 console.error("Key fetch error:", e);
                 throw e;
             }
-        }
-
-        // פונקציה לבחירת דגם יציב
-        async function getAvailableModel(apiKey) {
-            // כברירת מחדל נשתמש ב-1.5 פלאש שהוא היציב והמהיר ביותר כרגע
-            return "models/gemini-1.5-flash";
         }
 
         async function handleAISearch() {
@@ -98,8 +92,6 @@
             try {
                 statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
-                // נסיון להשתמש בדגם יציב
-                const modelName = "models/gemini-1.5-flash"; 
 
                 statusText.innerText = "סורק חדרים...";
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
@@ -111,7 +103,7 @@
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
                         rating: data.rating || 0,
-                        image: data.image || ""
+                        image: data.image || "" 
                     });
                 });
 
@@ -119,20 +111,24 @@
                 const aiPromptData = rooms.map(r => ({ id: r.id, name: r.name, location: r.location, rating: r.rating }));
                 const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(aiPromptData)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
 
-                const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+                // שינוי ה-URL לגרסה v1 שהיא יציבה יותר
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: prompt }] }] 
+                    })
                 });
 
-                if (response.status === 503) {
-                    throw new Error("שרתי Google בעומס כרגע. אנא נסה שוב בעוד דקה.");
-                }
-
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error.message);
+                if (!response.ok) {
+                    if (data.error && data.error.status === "UNAVAILABLE") {
+                        throw new Error("השרת עמוס, נסה שוב בעוד רגע");
+                    }
+                    throw new Error(data.error ? data.error.message : "שגיאת תקשורת");
+                }
 
                 const aiText = data.candidates[0].content.parts[0].text;
                 const cleanJson = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
@@ -163,8 +159,7 @@
 
             } catch (error) {
                 console.error("Process error:", error);
-                // הצגת הודעה ידידותית למשתמש במידה והשרת עמוס
-                alert(error.message.includes("high demand") ? "הבינה המלאכותית עמוסה כרגע, נסה שוב בעוד כמה שניות..." : "שגיאה: " + error.message);
+                alert("שגיאה: " + error.message);
                 statusContainer.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
