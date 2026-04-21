@@ -13,7 +13,11 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .room-image { height: 180px; width: 100%; object-fit: cover; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .room-image { height: 140px; width: 100%; object-fit: cover; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
+        .badge-scary { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-tech { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-kids { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
     </style>
 </head>
 <body class="p-6 pb-24">
@@ -25,7 +29,7 @@
         </header>
 
         <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר טכנולוגי ולא מפחיד לילדים" 
+            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש..." 
                 class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
             
             <button id="search-btn" onclick="handleAISearch()" 
@@ -46,7 +50,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // שימוש בקונפיגורציה המקורית שלך
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -60,28 +63,24 @@
         const db = firebase.firestore();
 
         async function fetchApiKey() {
-            console.log("--- DEBUG: מנסה לשלוף מפתח מה-DB ---");
             const doc = await db.collection("system_config").doc("geimini_settings").get();
-            if (doc.exists) {
-                console.log("--- DEBUG: מפתח נמצא בהצלחה ---");
-                return doc.data().apiKey;
-            }
-            throw new Error("מפתח AI לא נמצא ב-system_config/geimini_settings");
+            if (doc.exists) return doc.data().apiKey;
+            throw new Error("API Key missing");
         }
 
         async function getAvailableModel(apiKey) {
-            console.log("--- DEBUG: בודק מודלים זמינים ---");
             try {
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
                 const data = await resp.json();
                 const model = data.models.find(m => m.supportedGenerationMethods.includes("generateContent"));
-                const selected = model ? model.name : "models/gemini-1.5-flash";
-                console.log("--- DEBUG: מודל נבחר: " + selected + " ---");
-                return selected;
-            } catch (e) {
-                console.error("DEBUG ERROR: כשל בבדיקת מודלים, חוזר ל-default", e);
-                return "models/gemini-1.5-flash";
-            }
+                return model ? model.name : "models/gemini-1.5-flash";
+            } catch (e) { return "models/gemini-1.5-flash"; }
+        }
+
+        function truncateWords(text, limit) {
+            if (!text) return "";
+            const words = text.split(/\s+/);
+            return words.length <= limit ? text : words.slice(0, limit).join(" ") + "...";
         }
 
         async function handleAISearch() {
@@ -98,43 +97,25 @@
             searchBtn.disabled = true;
 
             try {
-                statusText.innerText = "מתחבר ל-AI...";
+                statusText.innerText = "מתחבר...";
                 const apiKey = await fetchApiKey();
                 const modelName = await getAvailableModel(apiKey);
 
-                console.log("--- DEBUG: שולף חדרים מה-DB ---");
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
-                const roomsForDisplay = [];
-                const roomsForAI = [];
+                const roomsData = [];
+                snapshot.forEach(doc => roomsData.push({ id: doc.id, ...doc.data() }));
 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    roomsForDisplay.push({ id: doc.id, ...data });
-                    roomsForAI.push({
-                        id: doc.id,
-                        name: data.name,
-                        description: data.description || "",
-                        kidFriendly: data.kidFriendly || false,
-                        location: data.location || "",
-                        rating: data.rating || 0,
-                        scaryLevel: data.scaryLevel || 0,
-                        techLevel: data.techLevel || 0
-                    });
-                });
+                const roomsForAI = roomsData.map(r => ({
+                    id: r.id, name: r.name, description: r.description || "",
+                    kidFriendly: r.kidFriendly || false, location: r.location || "",
+                    rating: r.rating || 0, scaryLevel: r.scaryLevel || 0, techLevel: r.techLevel || 0
+                }));
 
-                console.log("--- DEBUG: נתוני חדרים שנשלחים ל-AI ---", roomsForAI);
+                const prompt = `אתה מומחה לחדרי בריחה. המשתמש מחפש: "${input}". 
+                נתח את רשימת החדרים הזו: ${JSON.stringify(roomsForAI)}. 
+                תחזיר אך ורק מערך JSON של 3 ה-IDs המתאימים ביותר: ["id1", "id2", "id3"]. בלי הסברים נוספים!`;
 
-                const prompt = `אתה עוזר חכם למציאת חדרי בריחה. המשתמש מחפש: "${input}". 
-                רשימת חדרים ב-JSON: ${JSON.stringify(roomsForAI)}.
-                החזר אך ורק מערך JSON של 3 ה-IDs המתאימים ביותר: ["id1", "id2", "id3"]. בלי טקסט נוסף.`;
-
-                console.log("--- DEBUG: הפרומפט המלא ---", prompt);
-
-                // שימוש בדיוק באותו מבנה URL מהאפליקציה שעובדת לך
                 const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
-                
-                console.log("--- DEBUG: שולח בקשה ל-URL ---", url.replace(apiKey, "HIDDEN_KEY"));
-
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -142,43 +123,44 @@
                 });
 
                 const data = await response.json();
-                console.log("--- DEBUG: תשובה גולמית מה-AI ---", data);
-
                 if (!response.ok) throw new Error(data.error.message);
 
-                let text = data.candidates[0].content.parts[0].text;
-                console.log("--- DEBUG: טקסט שהתקבל מה-AI ---", text);
-
-                const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-                const recommendedIds = JSON.parse(cleanJson);
-                console.log("--- DEBUG: IDs שפוענחו ---", recommendedIds);
+                let aiText = data.candidates[0].content.parts[0].text;
+                
+                // --- מנגנון ניקוי JSON משופר ---
+                const jsonMatch = aiText.match(/\[.*\]/s); // מחפש כל מה שבין סוגריים מרובעים
+                if (!jsonMatch) throw new Error("ה-AI לא החזיר פורמט תקין");
+                const recommendedIds = JSON.parse(jsonMatch[0]);
 
                 statusContainer.classList.add('hidden');
                 
                 recommendedIds.forEach(id => {
-                    const room = roomsForDisplay.find(r => r.id === id);
+                    const room = roomsData.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
-                            <div class="glass overflow-hidden rounded-[2.5rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer transition-all hover:scale-[1.02]" 
+                            <div class="glass overflow-hidden rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" 
                                  onclick="window.location.href='room.html?id=${room.id}'">
-                                
-                                ${room.image ? `<img src="${room.image}" alt="${room.name}" class="room-image">` : 
-                                  `<div class="room-image bg-slate-800 flex items-center justify-center text-slate-600">אין תמונה זמינה</div>`}
-                                
-                                <div class="p-6">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <h3 class="text-xl font-bold">${room.name}</h3>
-                                        <span class="text-yellow-400 font-bold">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                ${room.image ? `<img src="${room.image}" class="room-image">` : `<div class="room-image bg-slate-800 flex items-center justify-center">אין תמונה</div>`}
+                                <div class="p-5">
+                                    <div class="flex justify-between mb-2">
+                                        <h3 class="text-lg font-bold">${room.name}</h3>
+                                        <span class="text-yellow-400 font-bold text-sm">⭐ ${Number(room.rating).toFixed(1)}</span>
                                     </div>
-                                    <p class="text-slate-400 text-sm italic">📍 ${room.location}</p>
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        ${room.kidFriendly ? '<span class="badge badge-kids">ילדים</span>' : ''}
+                                        <span class="badge badge-scary">פחד: ${room.scaryLevel}</span>
+                                        <span class="badge badge-tech">טכנולוגיה: ${room.techLevel}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-xs mb-2">${truncateWords(room.description, 20)}</p>
+                                    <p class="text-blue-400 text-[10px]">📍 ${room.location}</p>
                                 </div>
                             </div>`;
                     }
                 });
 
             } catch (error) {
-                console.error("--- DEBUG ERROR REPORT ---", error);
-                alert("שגיאה: " + error.message);
+                console.error(error);
+                alert("שגיאה בעיבוד הנתונים. נסה שוב.");
                 statusContainer.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
