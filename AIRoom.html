@@ -76,15 +76,10 @@
             }
         }
 
+        // פונקציה לבחירת דגם יציב
         async function getAvailableModel(apiKey) {
-            try {
-                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                const data = await resp.json();
-                const model = data.models.find(m => m.supportedGenerationMethods.includes("generateContent"));
-                return model ? model.name : "models/gemini-1.5-flash"; 
-            } catch (e) {
-                return "models/gemini-1.5-flash";
-            }
+            // כברירת מחדל נשתמש ב-1.5 פלאש שהוא היציב והמהיר ביותר כרגע
+            return "models/gemini-1.5-flash";
         }
 
         async function handleAISearch() {
@@ -103,7 +98,8 @@
             try {
                 statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
-                const modelName = await getAvailableModel(apiKey);
+                // נסיון להשתמש בדגם יציב
+                const modelName = "models/gemini-1.5-flash"; 
 
                 statusText.innerText = "סורק חדרים...";
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
@@ -115,12 +111,11 @@
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
                         rating: data.rating || 0,
-                        image: data.image || "" // הבאת התמונה מהקולקשיין
+                        image: data.image || ""
                     });
                 });
 
                 statusText.innerText = "ה-AI מחשב התאמות...";
-                // שולחים ל-AI רק את המידע הטקסטואלי כדי למנוע בלבול
                 const aiPromptData = rooms.map(r => ({ id: r.id, name: r.name, location: r.location, rating: r.rating }));
                 const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(aiPromptData)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
 
@@ -131,6 +126,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
+
+                if (response.status === 503) {
+                    throw new Error("שרתי Google בעומס כרגע. אנא נסה שוב בעוד דקה.");
+                }
 
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error.message);
@@ -164,7 +163,8 @@
 
             } catch (error) {
                 console.error("Process error:", error);
-                alert("שגיאה: " + error.message);
+                // הצגת הודעה ידידותית למשתמש במידה והשרת עמוס
+                alert(error.message.includes("high demand") ? "הבינה המלאכותית עמוסה כרגע, נסה שוב בעוד כמה שניות..." : "שגיאה: " + error.message);
                 statusContainer.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
