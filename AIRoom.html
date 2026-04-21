@@ -25,7 +25,7 @@
         </header>
 
         <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר עם שחקן לילדים" 
+            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר טכנולוגי מאוד ולא מפחיד שמתאים לילדים" 
                 class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
             
             <button id="search-btn" onclick="handleAISearch()" 
@@ -67,9 +67,8 @@
                 if (doc.exists) {
                     cachedApiKey = doc.data().apiKey;
                     return cachedApiKey;
-                } else {
-                    throw new Error("מפתח AI לא נמצא ב-DB");
                 }
+                throw new Error("מפתח AI לא נמצא");
             } catch (e) {
                 console.error("Key fetch error:", e);
                 throw e;
@@ -93,42 +92,54 @@
                 statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
 
-                statusText.innerText = "סורק חדרים...";
+                statusText.innerText = "מנתח נתוני חדרים...";
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
-                const rooms = [];
+                
+                const roomsForDisplay = []; // כל הנתונים כולל תמונה
+                const roomsForAI = [];      // רק הנתונים לניתוח ה-AI
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    rooms.push({
+                    
+                    // אובייקט לתצוגה
+                    roomsForDisplay.push({
                         id: doc.id,
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
                         rating: data.rating || 0,
-                        image: data.image || "" 
+                        image: data.image || ""
+                    });
+
+                    // אובייקט לבינה מלאכותית (כל הפרמטרים שביקשת)
+                    roomsForAI.push({
+                        id: doc.id,
+                        name: data.name,
+                        description: data.description || "",
+                        kidFriendly: data.kidFriendly || false,
+                        location: data.location || "",
+                        rating: data.rating || 0,
+                        scaryLevel: data.scaryLevel || 0,
+                        techLevel: data.techLevel || 0
                     });
                 });
 
-                statusText.innerText = "ה-AI מחשב התאמות...";
-                const aiPromptData = rooms.map(r => ({ id: r.id, name: r.name, location: r.location, rating: r.rating }));
-                const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(aiPromptData)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
+                statusText.innerText = "ה-AI מחשב התאמה אופטימלית...";
+                
+                const prompt = `אתה עוזר חכם למציאת חדרי בריחה. המשתמש מחפש: "${input}". 
+                לפניך רשימת חדרים בפורמט JSON: ${JSON.stringify(roomsForAI)}.
+                נתח את התיאור, רמת הפחד (scaryLevel), הרמה הטכנולוגית (techLevel) וההתאמה לילדים (kidFriendly).
+                החזר אך ורק מערך JSON של 3 ה-IDs המתאימים ביותר בסדר יורד: ["id1", "id2", "id3"]`;
 
-                // שינוי ה-URL לגרסה v1 שהיא יציבה יותר
                 const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ parts: [{ text: prompt }] }] 
-                    })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
 
                 const data = await response.json();
-                if (!response.ok) {
-                    if (data.error && data.error.status === "UNAVAILABLE") {
-                        throw new Error("השרת עמוס, נסה שוב בעוד רגע");
-                    }
-                    throw new Error(data.error ? data.error.message : "שגיאת תקשורת");
-                }
+                if (!response.ok) throw new Error(data.error ? data.error.message : "שגיאת AI");
 
                 const aiText = data.candidates[0].content.parts[0].text;
                 const cleanJson = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
@@ -137,7 +148,7 @@
                 statusContainer.classList.add('hidden');
                 
                 recommendedIds.forEach(id => {
-                    const room = rooms.find(r => r.id === id);
+                    const room = roomsForDisplay.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
                             <div class="glass overflow-hidden rounded-[2.5rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer transition-all hover:scale-[1.02]" 
