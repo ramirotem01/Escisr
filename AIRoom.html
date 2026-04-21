@@ -97,7 +97,7 @@
             searchBtn.disabled = true;
 
             try {
-                statusText.innerText = "מתחבר...";
+                statusText.innerText = "מתחבר ל AI זה יכול לקחת דקה...";
                 const apiKey = await fetchApiKey();
                 const modelName = await getAvailableModel(apiKey);
 
