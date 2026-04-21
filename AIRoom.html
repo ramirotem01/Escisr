@@ -13,6 +13,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .room-image { height: 180px; width: 100%; object-fit: cover; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
 <body class="p-6 pb-24">
@@ -45,7 +46,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // הקונפיגורציה שסיפקת בתחילת השיחה
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -55,7 +55,6 @@
             appId: "1:907984583225:web:66777e44fb162f68c3abe8"
         };
 
-        // אתחול Firebase והגדרת db
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -64,13 +63,12 @@
         async function fetchApiKey() {
             if (cachedApiKey) return cachedApiKey;
             try {
-                // שים לב לאיות geimini כפי שמופיע ב-DB שלך
                 const doc = await db.collection("system_config").doc("geimini_settings").get();
                 if (doc.exists) {
                     cachedApiKey = doc.data().apiKey;
                     return cachedApiKey;
                 } else {
-                    throw new Error("מפתח AI לא נמצא ב-system_config/geimini_settings");
+                    throw new Error("מפתח AI לא נמצא");
                 }
             } catch (e) {
                 console.error("Key fetch error:", e);
@@ -108,7 +106,6 @@
                 const modelName = await getAvailableModel(apiKey);
 
                 statusText.innerText = "סורק חדרים...";
-                // שליפת חדרים שאינם סגורים
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
                 const rooms = [];
                 snapshot.forEach(doc => {
@@ -117,12 +114,15 @@
                         id: doc.id,
                         name: data.name || "ללא שם",
                         location: data.location || "לא מצוין",
-                        rating: data.rating || 0
+                        rating: data.rating || 0,
+                        image: data.image || "" // הבאת התמונה מהקולקשיין
                     });
                 });
 
                 statusText.innerText = "ה-AI מחשב התאמות...";
-                const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(rooms)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
+                // שולחים ל-AI רק את המידע הטקסטואלי כדי למנוע בלבול
+                const aiPromptData = rooms.map(r => ({ id: r.id, name: r.name, location: r.location, rating: r.rating }));
+                const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(aiPromptData)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
 
@@ -140,17 +140,24 @@
                 const recommendedIds = JSON.parse(cleanJson);
 
                 statusContainer.classList.add('hidden');
+                
                 recommendedIds.forEach(id => {
                     const room = rooms.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
-                            <div class="glass p-6 rounded-[2rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer" 
+                            <div class="glass overflow-hidden rounded-[2.5rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer transition-all hover:scale-[1.02]" 
                                  onclick="window.location.href='room.html?id=${room.id}'">
-                                <div class="flex justify-between">
-                                    <h3 class="text-xl font-bold">${room.name}</h3>
-                                    <span class="text-yellow-400">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                
+                                ${room.image ? `<img src="${room.image}" alt="${room.name}" class="room-image">` : 
+                                  `<div class="room-image bg-slate-800 flex items-center justify-center text-slate-600">אין תמונה זמינה</div>`}
+                                
+                                <div class="p-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-xl font-bold">${room.name}</h3>
+                                        <span class="text-yellow-400 font-bold">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-sm italic">📍 ${room.location}</p>
                                 </div>
-                                <p class="text-slate-400 text-sm">📍 ${room.location}</p>
                             </div>`;
                     }
                 });
