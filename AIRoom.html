@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Room Finder Debug Mode</title>
+    <title>AI Room Finder | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -12,6 +12,7 @@
         .loader { width: 40px; height: 40px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .room-image { height: 180px; width: 100%; object-fit: cover; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
@@ -19,17 +20,17 @@
 
     <div class="max-w-2xl mx-auto">
         <header class="text-center mb-10">
-            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms AI Debug</h1>
-            <p class="text-slate-400 mt-2">בדיקת תקשורת ומבנה נתונים</p>
+            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms AI</h1>
+            <p class="text-slate-400 mt-2">חיפוש חכם מבוסס בינה מלאכותית</p>
         </header>
 
         <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
-            <textarea id="user-input" placeholder="תאר את החדר לחיפוש..." 
+            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר טכנולוגי ולא מפחיד לילדים" 
                 class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
             
             <button id="search-btn" onclick="handleAISearch()" 
                 class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
-                <span>🔍 הרץ חיפוש ובדוק קונסול</span>
+                <span>✨ מצא לי חדר</span>
             </button>
         </div>
 
@@ -45,6 +46,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <script>
+        // שימוש בקונפיגורציה המקורית שלך
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -58,18 +60,27 @@
         const db = firebase.firestore();
 
         async function fetchApiKey() {
-            console.log("--- 1. Fetching API Key ---");
+            console.log("--- DEBUG: מנסה לשלוף מפתח מה-DB ---");
+            const doc = await db.collection("system_config").doc("geimini_settings").get();
+            if (doc.exists) {
+                console.log("--- DEBUG: מפתח נמצא בהצלחה ---");
+                return doc.data().apiKey;
+            }
+            throw new Error("מפתח AI לא נמצא ב-system_config/geimini_settings");
+        }
+
+        async function getAvailableModel(apiKey) {
+            console.log("--- DEBUG: בודק מודלים זמינים ---");
             try {
-                const doc = await db.collection("system_config").doc("geimini_settings").get();
-                if (doc.exists) {
-                    const key = doc.data().apiKey;
-                    console.log("Key found (truncated):", key.substring(0, 10) + "...");
-                    return key;
-                }
-                throw new Error("API Key doc missing in Firestore");
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                const data = await resp.json();
+                const model = data.models.find(m => m.supportedGenerationMethods.includes("generateContent"));
+                const selected = model ? model.name : "models/gemini-1.5-flash";
+                console.log("--- DEBUG: מודל נבחר: " + selected + " ---");
+                return selected;
             } catch (e) {
-                console.error("Firestore Key Error:", e);
-                throw e;
+                console.error("DEBUG ERROR: כשל בבדיקת מודלים, חוזר ל-default", e);
+                return "models/gemini-1.5-flash";
             }
         }
 
@@ -87,12 +98,12 @@
             searchBtn.disabled = true;
 
             try {
-                statusText.innerText = "Debug: Check Console...";
+                statusText.innerText = "מתחבר ל-AI...";
                 const apiKey = await fetchApiKey();
+                const modelName = await getAvailableModel(apiKey);
 
-                console.log("--- 2. Fetching Rooms from DB ---");
+                console.log("--- DEBUG: שולף חדרים מה-DB ---");
                 const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
-                
                 const roomsForDisplay = [];
                 const roomsForAI = [];
 
@@ -111,19 +122,18 @@
                     });
                 });
 
-                console.log("Rooms found:", roomsForAI.length);
-                console.table(roomsForAI); // מציג טבלה יפה בקונסול
+                console.log("--- DEBUG: נתוני חדרים שנשלחים ל-AI ---", roomsForAI);
 
                 const prompt = `אתה עוזר חכם למציאת חדרי בריחה. המשתמש מחפש: "${input}". 
-                רשימת חדרים: ${JSON.stringify(roomsForAI)}.
-                החזר אך ורק מערך JSON של 3 ה-IDs המתאימים ביותר: ["id1", "id2", "id3"]`;
+                רשימת חדרים ב-JSON: ${JSON.stringify(roomsForAI)}.
+                החזר אך ורק מערך JSON של 3 ה-IDs המתאימים ביותר: ["id1", "id2", "id3"]. בלי טקסט נוסף.`;
 
-                // ניסיון עם ה-URL המלא והגרסה היציבה
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                console.log("--- DEBUG: הפרומפט המלא ---", prompt);
 
-                console.log("--- 3. AI Request ---");
-                console.log("URL:", url.split('key=')[0] + "key=HIDDEN");
-                console.log("Payload:", { contents: [{ parts: [{ text: prompt }] }] });
+                // שימוש בדיוק באותו מבנה URL מהאפליקציה שעובדת לך
+                const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+                
+                console.log("--- DEBUG: שולח בקשה ל-URL ---", url.replace(apiKey, "HIDDEN_KEY"));
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -131,24 +141,17 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
 
-                console.log("--- 4. AI Response Status ---");
-                console.log("HTTP Status:", response.status);
-
                 const data = await response.json();
-                
-                if (!response.ok) {
-                    console.error("AI Error Body:", data);
-                    throw new Error(`AI Error ${response.status}: ${data.error?.message || 'Unknown'}`);
-                }
+                console.log("--- DEBUG: תשובה גולמית מה-AI ---", data);
 
-                console.log("AI Success Body:", data);
+                if (!response.ok) throw new Error(data.error.message);
 
-                const aiText = data.candidates[0].content.parts[0].text;
-                console.log("Raw AI Text:", aiText);
+                let text = data.candidates[0].content.parts[0].text;
+                console.log("--- DEBUG: טקסט שהתקבל מה-AI ---", text);
 
-                const cleanJson = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+                const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
                 const recommendedIds = JSON.parse(cleanJson);
-                console.log("Parsed IDs:", recommendedIds);
+                console.log("--- DEBUG: IDs שפוענחו ---", recommendedIds);
 
                 statusContainer.classList.add('hidden');
                 
@@ -156,17 +159,26 @@
                     const room = roomsForDisplay.find(r => r.id === id);
                     if (room) {
                         resultsContainer.innerHTML += `
-                            <div class="glass overflow-hidden rounded-[2.5rem] border-r-4 border-blue-500 animate-fadeIn p-4 mb-4">
-                                <h3 class="text-xl font-bold">${room.name}</h3>
-                                <p class="text-slate-400">ID: ${room.id}</p>
+                            <div class="glass overflow-hidden rounded-[2.5rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer transition-all hover:scale-[1.02]" 
+                                 onclick="window.location.href='room.html?id=${room.id}'">
+                                
+                                ${room.image ? `<img src="${room.image}" alt="${room.name}" class="room-image">` : 
+                                  `<div class="room-image bg-slate-800 flex items-center justify-center text-slate-600">אין תמונה זמינה</div>`}
+                                
+                                <div class="p-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-xl font-bold">${room.name}</h3>
+                                        <span class="text-yellow-400 font-bold">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-sm italic">📍 ${room.location}</p>
+                                </div>
                             </div>`;
                     }
                 });
 
             } catch (error) {
-                console.error("--- DEBUG ERROR REPORT ---");
-                console.error(error);
-                alert("בדוק את הקונסול לשגיאה המפורטת");
+                console.error("--- DEBUG ERROR REPORT ---", error);
+                alert("שגיאה: " + error.message);
                 statusContainer.classList.add('hidden');
             } finally {
                 searchBtn.disabled = false;
