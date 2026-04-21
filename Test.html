@@ -3,67 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ניהול מערכת | EscapeRooms (DEBUG MODE)</title>
+    <title>AI Room Finder | EscapeRooms</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .edit-mode { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+        body { background-color: #020617; color: white; font-family: 'Heebo', sans-serif; text-align: right; }
+        .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .loader { width: 40px; height: 40px; border: 3px solid transparent; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .room-image { height: 180px; width: 100%; object-fit: cover; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
-<body class="p-6 pb-24 text-right">
+<body class="p-6 pb-24">
 
     <div class="max-w-2xl mx-auto">
-        <header class="mb-8 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-blue-400">ניהול חדרים 🛠️ <span class="text-xs text-red-500">(Debug On)</span></h1>
-            <a href="index.html" class="text-xs bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700 transition text-slate-300">חזרה לאתר</a>
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 italic tracking-tighter">EscapeRooms AI</h1>
+            <p class="text-slate-400 mt-2">חיפוש חכם מבוסס בינה מלאכותית</p>
         </header>
 
-        <div id="connection-status" class="mb-4 p-2 text-xs rounded-lg bg-slate-800 text-slate-400">
-            מנסה להתחבר ל-Firebase...
+        <div class="glass p-6 rounded-[2.5rem] mb-8 shadow-2xl">
+            <textarea id="user-input" placeholder="תאר את החדר שאתה מחפש... למשל: חדר עם שחקן לילדים" 
+                class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 h-32 resize-none transition-all text-lg"></textarea>
+            
+            <button id="search-btn" onclick="handleAISearch()" 
+                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2">
+                <span>✨ מצא לי חדר</span>
+            </button>
         </div>
-        
-        <section id="form-container" class="glass p-6 rounded-3xl mb-10 shadow-2xl border-t border-white/10 transition-all">
-            <h2 id="form-title" class="text-lg font-bold mb-4 text-blue-400">✨ הוספת חדר חדש</h2>
-            <form id="room-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="hidden" id="edit-id">
-                <div class="md:col-span-2">
-                    <label class="block text-[10px] uppercase text-slate-500 mb-1">שם החדר</label>
-                    <input type="text" id="name" required placeholder="שם החדר..." class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase text-slate-500 mb-1">עיר</label>
-                    <select id="location" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                        <option value="" disabled selected>בחר עיר...</option>
-                        <option value="תל אביב">תל אביב</option>
-                        <option value="ירושלים">ירושלים</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase text-slate-500 mb-1">ציון כללי</label>
-                    <input type="number" id="rating" step="0.1" min="1" max="10" required class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl text-yellow-500">
-                </div>
-                <div class="md:col-span-2 flex gap-2 mt-4">
-                    <button type="submit" id="submit-btn" class="flex-grow bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all">
-                        הוסף חדר למערכת 🚀
-                    </button>
-                </div>
-            </form>
-        </section>
 
-        <section>
-            <h2 class="text-lg font-bold text-slate-400 mb-4">📋 רשימת חדרים</h2>
-            <div id="admin-rooms-list" class="space-y-3"></div>
-        </section>
+        <div id="status-container" class="hidden flex flex-col items-center gap-4 mb-8">
+            <div class="loader"></div>
+            <p id="status-text" class="text-blue-400 font-bold animate-pulse text-sm"></p>
+        </div>
+
+        <div id="results-container" class="grid gap-6"></div>
     </div>
 
-    <script type="module">
-        // לוג ראשוני
-        console.log("🚀 [DEBUG] התחלת טעינת דף הניהול...");
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { initializeFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
+    <script>
         const firebaseConfig = {
             apiKey: "AIzaSyB32VRQKljRUOPeiftIAQTGtoF-qthI-h4",
             authDomain: "escisr.firebaseapp.com",
@@ -73,86 +55,121 @@
             appId: "1:907984583225:web:66777e44fb162f68c3abe8"
         };
 
-        let db;
-        const statusEl = document.getElementById('connection-status');
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        try {
-            console.log("🔗 [DEBUG] מנסה לאתחל את Firebase App...");
-            const app = initializeApp(firebaseConfig);
-            console.log("✅ [DEBUG] Firebase App אותחל בהצלחה.");
+        let cachedApiKey = null;
 
-            // שימוש ב-initializeFirestore עם Force Long Polling לפתרון בעיות חיבור
-            console.log("🔥 [DEBUG] מנסה לאתחל את Firestore (Force Long Polling)...");
-            db = initializeFirestore(app, {
-                experimentalForceLongPolling: true,
-                useFetchStreams: false
-            });
-            console.log("✅ [DEBUG] Firestore אותחל.");
-            statusEl.innerText = "מחובר ל-Firebase (שיטת Polling)";
-            statusEl.classList.replace('text-slate-400', 'text-green-400');
-        } catch (err) {
-            console.error("❌ [DEBUG] שגיאה קריטית באתחול Firebase:", err);
-            statusEl.innerText = "שגיאת אתחול: " + err.message;
-            statusEl.classList.replace('text-slate-400', 'text-red-400');
+        async function fetchApiKey() {
+            if (cachedApiKey) return cachedApiKey;
+            try {
+                const doc = await db.collection("system_config").doc("geimini_settings").get();
+                if (doc.exists) {
+                    cachedApiKey = doc.data().apiKey;
+                    return cachedApiKey;
+                } else {
+                    throw new Error("מפתח AI לא נמצא");
+                }
+            } catch (e) {
+                console.error("Key fetch error:", e);
+                throw e;
+            }
         }
 
-        async function loadAdminRooms() {
-            console.log("📥 [DEBUG] מנסה למשוך נתונים מקולקשן 'rooms'...");
-            const list = document.getElementById('admin-rooms-list');
-            list.innerHTML = 'טוען...';
+        async function getAvailableModel(apiKey) {
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                const data = await resp.json();
+                const model = data.models.find(m => m.supportedGenerationMethods.includes("generateContent"));
+                return model ? model.name : "models/gemini-1.5-flash"; 
+            } catch (e) {
+                return "models/gemini-1.5-flash";
+            }
+        }
+
+        async function handleAISearch() {
+            const input = document.getElementById('user-input').value.trim();
+            if (!input) return;
+
+            const statusContainer = document.getElementById('status-container');
+            const statusText = document.getElementById('status-text');
+            const resultsContainer = document.getElementById('results-container');
+            const searchBtn = document.getElementById('search-btn');
+
+            resultsContainer.innerHTML = '';
+            statusContainer.classList.remove('hidden');
+            searchBtn.disabled = true;
 
             try {
-                const querySnapshot = await getDocs(collection(db, "rooms"));
-                console.log(`✅ [DEBUG] משיכת הנתונים הצליחה. נמצאו ${querySnapshot.size} חדרים.`);
-                
-                const listHTML = [];
-                querySnapshot.forEach((doc) => {
+                statusText.innerText = "מתחבר ל-AI...";
+                const apiKey = await fetchApiKey();
+                const modelName = await getAvailableModel(apiKey);
+
+                statusText.innerText = "סורק חדרים...";
+                const snapshot = await db.collection("rooms").where("isClosed", "==", false).get();
+                const rooms = [];
+                snapshot.forEach(doc => {
                     const data = doc.data();
-                    listHTML.push(`
-                        <div class="glass p-4 rounded-2xl flex justify-between items-center border-r-4 border-blue-500">
-                            <div>
-                                <h3 class="font-bold text-blue-100">${data.name}</h3>
-                                <p class="text-[10px] text-slate-500">${data.location} | ID: ${doc.id}</p>
-                            </div>
-                        </div>
-                    `);
+                    rooms.push({
+                        id: doc.id,
+                        name: data.name || "ללא שם",
+                        location: data.location || "לא מצוין",
+                        rating: data.rating || 0,
+                        image: data.image || "" // הבאת התמונה מהקולקשיין
+                    });
                 });
-                list.innerHTML = listHTML.join('') || "אין חדרים בבסיס הנתונים.";
-            } catch (err) {
-                console.error("❌ [DEBUG] שגיאה במשיכת הנתונים (getDocs):", err);
-                console.error("קוד שגיאה:", err.code);
-                console.error("הודעה:", err.message);
+
+                statusText.innerText = "ה-AI מחשב התאמות...";
+                // שולחים ל-AI רק את המידע הטקסטואלי כדי למנוע בלבול
+                const aiPromptData = rooms.map(r => ({ id: r.id, name: r.name, location: r.location, rating: r.rating }));
+                const prompt = `User wants: "${input}". Recommend from: ${JSON.stringify(aiPromptData)}. Return ONLY a JSON array of the top 3 IDs: ["id1", "id2", "id3"]`;
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error.message);
+
+                const aiText = data.candidates[0].content.parts[0].text;
+                const cleanJson = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+                const recommendedIds = JSON.parse(cleanJson);
+
+                statusContainer.classList.add('hidden');
                 
-                list.innerHTML = `<div class="text-red-500 text-sm">שגיאה: ${err.message}<br>בדוק את הקונסול לפרטים.</div>`;
-                statusEl.innerText = "שגיאת תקשורת: " + err.code;
+                recommendedIds.forEach(id => {
+                    const room = rooms.find(r => r.id === id);
+                    if (room) {
+                        resultsContainer.innerHTML += `
+                            <div class="glass overflow-hidden rounded-[2.5rem] border-r-4 border-blue-500 animate-fadeIn cursor-pointer transition-all hover:scale-[1.02]" 
+                                 onclick="window.location.href='room.html?id=${room.id}'">
+                                
+                                ${room.image ? `<img src="${room.image}" alt="${room.name}" class="room-image">` : 
+                                  `<div class="room-image bg-slate-800 flex items-center justify-center text-slate-600">אין תמונה זמינה</div>`}
+                                
+                                <div class="p-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-xl font-bold">${room.name}</h3>
+                                        <span class="text-yellow-400 font-bold">⭐ ${Number(room.rating).toFixed(1)}</span>
+                                    </div>
+                                    <p class="text-slate-400 text-sm italic">📍 ${room.location}</p>
+                                </div>
+                            </div>`;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Process error:", error);
+                alert("שגיאה: " + error.message);
+                statusContainer.classList.add('hidden');
+            } finally {
+                searchBtn.disabled = false;
             }
         }
-
-        document.getElementById('room-form').onsubmit = async (e) => {
-            e.preventDefault();
-            console.log("📤 [DEBUG] מנסה לשלוח חדר חדש...");
-            
-            const roomData = {
-                name: document.getElementById('name').value,
-                location: document.getElementById('location').value,
-                rating: parseFloat(document.getElementById('rating').value),
-                createdAt: new Date()
-            };
-
-            try {
-                const docRef = await addDoc(collection(db, "rooms"), roomData);
-                console.log("✅ [DEBUG] החדר נוסף בהצלחה! מזהה (ID):", docRef.id);
-                alert("הצלחה!");
-                loadAdminRooms();
-            } catch (err) {
-                console.error("❌ [DEBUG] שגיאה בכתיבת נתונים (addDoc):", err);
-                alert("שגיאת כתיבה: " + err.message);
-            }
-        };
-
-        // הפעלה
-        loadAdminRooms();
-
     </script>
 </body>
 </html>
